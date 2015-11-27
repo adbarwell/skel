@@ -12,8 +12,10 @@
 -export([
          run/2,
          do/2,
+         farm/1,
          farm/2,
          farm/3,
+         pipe/1,
          pipe/2
         ]).
 
@@ -52,16 +54,28 @@ do(WorkFlow, Input) ->
         Results
   end.
 
--spec farm(fun(), list()) -> list().
-farm(Fun, Input) ->
-    skel:do([{farm, [{seq, Fun}], erlang:system_info(schedulers_online)}], Input).
+-spec farm(fun()) -> wf_item().
+farm(Fun) ->
+    {farm, {func, Fun}}.
+
+-spec farm(fun(), list() | integer()) -> list().
+farm(Fun, NWs) when is_integer(NWs) ->
+    {farm, {func, Fun}, NWs};
+farm(Fun, Input) when is_list(Input) ->
+    skel:do({farm, {func, Fun}}, Input).
 
 -spec farm(fun(), non_neg_integer(), list()) -> list().
 farm(Fun, N, Input) ->
-    skel:do([{farm, [{seq, Fun}], N}], Input).
+    skel:do({farm, {func, Fun}, N}, Input).
+
+-spec pipe([fun()]) -> list().
+pipe(WorkflowFuns) ->
+    lists:map(fun(Fun) ->
+                      {func, Fun}
+              end, WorkflowFuns).
 
 -spec pipe([fun()], list()) -> list().
 pipe(WorkflowFuns, Input) ->
     skel:do(lists:map(fun(Fun) ->
-                              {seq, Fun}
+                              {func, Fun}
                       end, WorkflowFuns), Input).
