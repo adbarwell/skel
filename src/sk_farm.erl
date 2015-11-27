@@ -9,26 +9,26 @@
 %%% sent to one of `n' replicas of the inner skeleton for processing.
 %%%
 %%% === Example ===
-%%% 
+%%%
 %%% 	```skel:run([{farm, [{seq, fun ?MODULE:p1/1}], 10}], Input)'''
-%%% 
-%%% 	In this simple example, we produce a farm with ten workers to run the 
-%%% sequential, developer-defined function `p/1' using the list of inputs 
+%%%
+%%% 	In this simple example, we produce a farm with ten workers to run the
+%%% sequential, developer-defined function `p/1' using the list of inputs
 %%% `Input'.
-%%% 
+%%%
 %%% @end
 %%%----------------------------------------------------------------------------
 -module(sk_farm).
 
 -export([
-         make/2,  
+         make/2,
          make_hyb/4
         ]).
 
--include("skel.hrl").
+-include("../include/skel.hrl").
 
 -spec make(pos_integer(), workflow()) -> maker_fun().
-%% @doc Initialises a Farm skeleton given the number of workers and their 
+%% @doc Initialises a Farm skeleton given the number of workers and their
 %% inner-workflows, respectively.
 make(NWorkers, WorkFlow) ->
   fun(NextPid) ->
@@ -41,7 +41,7 @@ make(NWorkers, WorkFlow) ->
 make_hyb(NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU) ->
   fun(NextPid) ->
     CollectorPid = spawn(sk_farm_collector, start, [NCPUWorkers+NGPUWorkers, NextPid]),
-    WorkerPids = sk_utils:start_workers_hyb(NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU, 
+    WorkerPids = sk_utils:start_workers_hyb(NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU,
                                             CollectorPid),
     spawn(sk_farm_emitter, start, [WorkerPids])
   end.

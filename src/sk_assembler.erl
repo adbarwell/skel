@@ -13,34 +13,37 @@
 
 -export([
          make/2
-	,make_hyb/4
+        ,make_hyb/4
         ,run/2
         ]).
 
--include("skel.hrl").
+-include("../include/skel.hrl").
 
 -ifdef(TEST).
 -compile(export_all).
 -endif.
 
 -spec make(workflow(), pid() | module()) -> pid() .
-%% @doc Function to produce a set of processes according to the given workflow 
+%% @doc Function to produce a set of processes according to the given workflow
 %% specification.
 make(WorkFlow, EndModule) when is_atom(EndModule) ->
-  DrainPid = (sk_sink:make(EndModule))(self()),
-  make(WorkFlow, DrainPid);
-make(WorkFlow, EndPid) when is_pid(EndPid) ->
-  MakeFns = [parse(Section) || Section <- WorkFlow],
-  lists:foldr(fun(MakeFn, Pid) -> MakeFn(Pid) end, EndPid, MakeFns).
+    DrainPid = (sk_sink:make(EndModule))(self()),
+    make(WorkFlow, DrainPid);
+make(WorkFlow, EndPid) when is_pid(EndPid), is_list(WorkFlow) ->
+    MakeFns = [parse(Section) || Section <- WorkFlow],
+    lists:foldr(fun(MakeFn, Pid) -> MakeFn(Pid) end, EndPid, MakeFns);
+make(WorkFlow, EndPid) when is_pid(EndPid), is_tuple(WorkFlow) ->
+    (parse(WorkFlow))(EndPid).
+
 
 -spec make_hyb(workflow(), pid(), pos_integer(), pos_integer()) -> pid().
 make_hyb(WorkFlow, EndPid, NCPUWorkers, NGPUWorkers) when is_pid(EndPid) ->
   MakeFns = [parse_hyb(Section, NCPUWorkers, NGPUWorkers) || Section <- WorkFlow],
   lists:foldr(fun(MakeFn, Pid) -> MakeFn(Pid) end, EndPid, MakeFns).
-    
+
 
 -spec run(pid() | workflow(), input()) -> pid().
-%% @doc Function to produce and start a set of processes according to the 
+%% @doc Function to produce and start a set of processes according to the
 %% given workflow specification and input.
 run(WorkFlow, Input) when is_pid(WorkFlow) ->
   Feeder = sk_source:make(Input),
@@ -48,7 +51,10 @@ run(WorkFlow, Input) when is_pid(WorkFlow) ->
 run(WorkFlow, Input) when is_list(WorkFlow) ->
   DrainPid = (sk_sink:make())(self()),
   AssembledWF = make(WorkFlow, DrainPid),
-  run(AssembledWF, Input).
+    run(AssembledWF, Input);
+run(WorkFlow, Input) when is_tuple(WorkFlow) ->
+    run(make(WorkFlow, (sk_sink:make())(self())), Input).
+
 
 parse_hyb(Section, NCPUWorkers, NGPUWorkers) ->
     case Section of
@@ -59,16 +65,20 @@ parse_hyb(Section, NCPUWorkers, NGPUWorkers) ->
 
 
 -spec parse(wf_item()) -> maker_fun().
-%% @doc Determines the course of action to be taken according to the type of 
+%% @doc Determines the course of action to be taken according to the type of
 %% workflow specified. Constructs and starts specific skeleton instances.
 parse(Fun) when is_function(Fun, 1) ->
-  parse({seq, Fun});
+  parse({func, Fun});
+parse({func, Fun}) when is_function(Fun, 1) ->
+  sk_seq:make(Fun);
 parse({seq, Fun}) when is_function(Fun, 1) ->
   sk_seq:make(Fun);
 parse({pipe, WorkFlow}) ->
   sk_pipe:make(WorkFlow);
 parse({ord, WorkFlow}) ->
   sk_ord:make(WorkFlow);
+parse({farm, WorkFlow}) ->
+  sk_farm:make(sk_utils:cores_available(), WorkFlow);
 parse({farm, WorkFlow, NWorkers}) ->
   sk_farm:make(NWorkers, WorkFlow);
 parse({hyb_farm, WorkFlowCPU, WorkFlowGPU, NCPUWorkers, NGPUWorkers}) ->
@@ -103,5 +113,3 @@ parse({reduce, Reduce, Decomp}) when is_function(Reduce, 2),
   sk_reduce:make(Decomp, Reduce);
 parse({feedback, WorkFlow, Filter}) when is_function(Filter, 1) ->
   sk_feedback:make(WorkFlow, Filter).
-
-

@@ -19,7 +19,7 @@
         ,start/2
         ]).
 
--include("skel.hrl").
+-include("../include/skel.hrl").
 
 -ifdef(TEST).
 -compile(export_all).
@@ -37,7 +37,7 @@
 -callback terminate(State :: term()) ->
     ok.
 
-%% @doc Creates a new child process using Input, given the parent process 
+%% @doc Creates a new child process using Input, given the parent process
 %% <tt>Pid</tt>.
 -spec make(input()) -> maker_fun().
 make(Input) ->
@@ -49,16 +49,17 @@ make(Input) ->
 %% @todo add documentation for the callback loop
 -spec start(input(), pid()) -> 'eos'.
 start(Input, NextPid) when is_list(Input) ->
-  list_loop(Input, NextPid);
+    list_loop(Input, NextPid);
 start(InputMod, NextPid) when is_atom(InputMod) ->
-  case InputMod:init() of
-    {ok, State} -> callback_loop(InputMod, State, NextPid);
-    {no_inputs, State}  ->
-      send_eos(NextPid),
-      InputMod:terminate(State)
-  end.
+    io:format("InputMod: ~p~n", [InputMod]),
+    case InputMod:init() of
+        {ok, State} -> callback_loop(InputMod, State, NextPid);
+        {no_inputs, State}  ->
+            send_eos(NextPid),
+            InputMod:terminate(State)
+    end.
 
-%% @doc Recursively sends each input in a given list to the process 
+%% @doc Recursively sends each input in a given list to the process
 %% <tt>NextPid</tt>.
 list_loop([], NextPid) ->
   send_eos(NextPid);
@@ -80,8 +81,8 @@ callback_loop(InputMod, State, NextPid) ->
       eos
   end.
 
-%% @doc <tt>Input</tt> is formatted as a data message and sent to the 
-%% process <tt>NextPid</tt>. 
+%% @doc <tt>Input</tt> is formatted as a data message and sent to the
+%% process <tt>NextPid</tt>.
 send_input(Input, NextPid) ->
   DataMessage = sk_data:pure(Input),
   sk_tracer:t(50, self(), NextPid, {?MODULE, data}, [{output, DataMessage}]),
@@ -91,5 +92,3 @@ send_eos(NextPid) ->
   sk_tracer:t(75, self(), NextPid, {?MODULE, system}, [{msg, eos}]),
   NextPid ! {system, eos},
   eos.
-
-
