@@ -17,9 +17,9 @@
 -module(sk_sink).
 
 -export([
-         make/0
+         make/1
         ,start_acc/1
-        ,make/1
+        ,make/2
         ,start_mod/2
         ]).
 
@@ -40,28 +40,36 @@
 -callback terminate(State :: term()) ->
     term().
 
--spec make() -> maker_fun().
+-spec make(pid()) -> maker_fun().
 %% @doc Creates the process to which the final results are sent. Returns an
 %% anonymous function which takes the <tt>Pid</tt> of the process it is linked
 %% to.
-make() ->
-  fun(Pid) ->
-    spawn(?MODULE, start_acc, [Pid])
-  end.
+make(Monitor) ->
+    fun(Pid) ->
+            Monitor ! {spawn, self(), ?MODULE, start_acc, [Pid]},
+            receive
+                R when is_pid(R) ->
+                    R
+            end
+    end.
 
--spec make(module()) -> maker_fun().
+-spec make(pid(), module()) -> maker_fun().
 %% @doc Creates the process to which the final results are sent using the
 %% specified module <tt>OutputMod</tt>. Returns an anonymous function, taking
 %% the <tt>Pid</tt> of the process it is linked to.
-make(OutputMod) ->
-  fun(Pid) ->
-    spawn(?MODULE, start_mod, [OutputMod, Pid])
-  end.
+make(Monitor, OutputMod) ->
+    fun(Pid) ->
+            Monitor ! {spawn, self(), ?MODULE, start_mod, [OutputMod, Pid]},
+            receive
+                R when is_pid(R) ->
+                    R
+            end
+    end.
 
 -spec start_acc(pid()) -> 'eos'.
 %% @doc Sets the sink process to receive messages from other processes.
 start_acc(NextPid) ->
-  loop_acc(NextPid, []).
+    loop_acc(NextPid, []).
 
 -spec loop_acc(pid(), list()) -> 'eos'.
 %% @doc Recursively recieves messages, collecting each result in a list.

@@ -15,7 +15,7 @@
 -module(sk_source).
 
 -export([
-         make/1
+         make/2
         ,start/2
         ]).
 
@@ -39,11 +39,15 @@
 
 %% @doc Creates a new child process using Input, given the parent process
 %% <tt>Pid</tt>.
--spec make(input()) -> maker_fun().
-make(Input) ->
-  fun(Pid) ->
-    spawn(?MODULE, start, [Input, Pid])
-  end.
+-spec make(pid(), input()) -> maker_fun().
+make(Monitor, Input) ->
+    fun(Pid) ->
+            Monitor ! {spawn, self(), ?MODULE, start, [Input, Pid]},
+            receive
+                R when is_pid(R) ->
+                    R
+            end
+    end.
 
 %% @doc Transmits each input in <tt>Input</tt> to the process <tt>NextPid</tt>.
 %% @todo add documentation for the callback loop

@@ -33,7 +33,9 @@
 %%    list <tt>Images</tt> using the Sequential Function wrapper.
 %%
 run(WorkFlow, Input) ->
-  sk_assembler:run(WorkFlow, Input).
+    Monitor = sk_monitor:start(),
+    sk_assembler:run(Monitor, WorkFlow, Input),
+    Monitor.
 
 -spec do(workflow(), list()) -> list().
 %% @doc The second entry-point function to the Skel library. This function
@@ -48,11 +50,16 @@ run(WorkFlow, Input) ->
 %%      or otherwise used.
 %%
 do(WorkFlow, Input) ->
-  run(WorkFlow, Input),
-  receive
-    {sink_results, Results} ->
-        Results
-  end.
+    Monitor = run(WorkFlow, Input),
+    receive
+        {'EXIT', Monitor, _} ->
+            error("Skel: error");
+        {sink_results, Results} ->
+            Monitor ! {system, eos},
+            Results;
+        X ->
+            io:format("X: ~p~n", [X])
+    end.
 
 -spec farm(fun()) -> wf_item().
 farm(Fun) ->
