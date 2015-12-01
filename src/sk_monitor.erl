@@ -2,7 +2,8 @@
 
 -export([
          loop/1,
-         start/0
+         start/0,
+         spawn/5
         ]).
 
 -include("../include/skel.hrl").
@@ -31,3 +32,12 @@ loop(Ps) ->
 -spec start() -> pid().
 start() ->
     spawn_link(?MODULE, loop, [dict:new()]).
+
+-spec spawn(pid(), pid(), module(), atom(), list()) -> pid().
+spawn(Monitor, Origin, M, F, A) ->
+    Monitor ! {spawn, Origin, M, F, A},
+    receive
+        R when is_pid(R) ->
+            R
+    end.
+

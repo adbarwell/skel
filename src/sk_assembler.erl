@@ -33,6 +33,8 @@ make(Monitor, WorkFlow, EndPid) when is_pid(EndPid), is_list(WorkFlow) ->
     MakeFns = [parse(Monitor, Section) || Section <- WorkFlow],
     lists:foldr(fun(MakeFn, Pid) -> MakeFn(Pid) end, EndPid, MakeFns);
 make(Monitor,  WorkFlow, EndPid) when is_pid(EndPid), is_tuple(WorkFlow) ->
+    (parse(Monitor, WorkFlow))(EndPid);
+make(Monitor,  WorkFlow, EndPid) when is_pid(EndPid), is_function(WorkFlow) ->
     (parse(Monitor, WorkFlow))(EndPid).
 
 
@@ -76,13 +78,13 @@ parse(Monitor, {func, Fun}) when is_function(Fun, 1) ->
 parse(Monitor, {seq, Fun}) when is_function(Fun, 1) ->
   sk_seq:make(Monitor, Fun);
 parse(Monitor, {pipe, WorkFlow}) ->
-  sk_pipe:make(WorkFlow);
+  sk_pipe:make(Monitor, WorkFlow);
 parse(Monitor, {ord, WorkFlow}) ->
-  sk_ord:make(WorkFlow);
+  sk_ord:make(Monitor, WorkFlow);
 parse(Monitor, {farm, WorkFlow}) ->
-  sk_farm:make(sk_utils:cores_available(), WorkFlow);
+  sk_farm:make(Monitor, sk_utils:cores_available(), WorkFlow);
 parse(Monitor, {farm, WorkFlow, NWorkers}) ->
-  sk_farm:make(NWorkers, WorkFlow);
+  sk_farm:make(Monitor, NWorkers, WorkFlow);
 parse(Monitor, {hyb_farm, WorkFlowCPU, WorkFlowGPU, NCPUWorkers, NGPUWorkers}) ->
   sk_farm:make_hyb(Monitor, NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU);
 parse(Monitor, {map, WorkFlow}) ->

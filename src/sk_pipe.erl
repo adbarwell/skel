@@ -27,15 +27,15 @@
 -module(sk_pipe).
 
 -export([
-         make/1
+         make/2
         ]).
 
 -include("../include/skel.hrl").
 
--spec make(skel:workflow()) -> skel:maker_fun().
+-spec make(pid(), skel:workflow()) -> skel:maker_fun().
 %% @doc Produces workers according to the specified workflow. Returns an
 %% anonymous function taking the Pid of the parent process `NextPid'.
-make(WorkFlow) ->
+make(Monitor, WorkFlow) ->
   fun(NextPid) ->
-    sk_assembler:make(WorkFlow, NextPid)
+    sk_assembler:make(Monitor, WorkFlow, NextPid)
   end.

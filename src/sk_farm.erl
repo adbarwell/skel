@@ -21,27 +21,39 @@
 -module(sk_farm).
 
 -export([
-         make/2,
-         make_hyb/4
+         make/3,
+         make_hyb/5
         ]).
 
 -include("../include/skel.hrl").
 
--spec make(pos_integer(), workflow()) -> maker_fun().
+-spec make(pid(), pos_integer(), workflow()) -> maker_fun().
 %% @doc Initialises a Farm skeleton given the number of workers and their
 %% inner-workflows, respectively.
-make(NWorkers, WorkFlow) ->
+make(Monitor, NWorkers, WorkFlow) ->
   fun(NextPid) ->
-    CollectorPid = spawn(sk_farm_collector, start, [NWorkers, NextPid]),
-    WorkerPids = sk_utils:start_workers(NWorkers, WorkFlow, CollectorPid),
-    spawn(sk_farm_emitter, start, [WorkerPids])
+    CollectorPid =
+              sk_monitor:spawn(Monitor, self(),
+                               sk_farm_collector, start, [NWorkers, NextPid]),
+    WorkerPids =
+              sk_utils:start_workers(Monitor, NWorkers, WorkFlow, CollectorPid),
+    sk_monitor:spawn(Monitor, self(), sk_farm_emitter, start, [WorkerPids])
   end.
 
--spec make_hyb(pos_integer(), pos_integer(), workflow(), workflow()) -> maker_fun().
-make_hyb(NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU) ->
-  fun(NextPid) ->
-    CollectorPid = spawn(sk_farm_collector, start, [NCPUWorkers+NGPUWorkers, NextPid]),
-    WorkerPids = sk_utils:start_workers_hyb(NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU,
-                                            CollectorPid),
-    spawn(sk_farm_emitter, start, [WorkerPids])
-  end.
+-spec make_hyb(pid(), pos_integer(), pos_integer(), workflow(), workflow()) -> maker_fun().
+make_hyb(Monitor, NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU) ->
+    fun(NextPid) ->
+            CollectorPid = sk_monitor:spawn(Monitor,
+                                            self(),
+                                            sk_farm_collector,
+                                            start,
+                                            [NCPUWorkers+NGPUWorkers, NextPid]),
+            WorkerPids = sk_utils:start_workers_hyb(Monitor,
+                                                    NCPUWorkers,
+                                                    NGPUWorkers,
+                                                    WorkFlowCPU,
+                                                    WorkFlowGPU,
+                                                    CollectorPid),
+            sk_monitor:spawn(Monitor, self(),
+                             sk_farm_emitter, start, [WorkerPids])
+    end.

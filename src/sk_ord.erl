@@ -26,7 +26,7 @@
 -module(sk_ord).
 
 -export([
-         make/1
+         make/2
         ]).
 
 -include("../include/skel.hrl").
@@ -35,12 +35,14 @@
 -compile(export_all).
 -endif.
 
--spec make(workflow()) -> maker_fun().
+-spec make(pid(), workflow()) -> maker_fun().
 %% @doc Constructs an Ord skeleton wrapper to ensure the outputs of the
 %% specified workflow are in the same order as that of its inputs.
-make(WorkFlow) ->
-  fun(NextPid) ->
-    ReordererPid = spawn(sk_ord_reorderer, start, [NextPid]),
-    WorkerPid = sk_utils:start_worker(WorkFlow, ReordererPid),
-    spawn(sk_ord_tagger, start, [WorkerPid])
-  end.
+make(Monitor, WorkFlow) ->
+    fun(NextPid) ->
+            ReordererPid = sk_monitor:spawn(Monitor,
+                                            self(),
+                                            sk_ord_reorderer, start, [NextPid]),
+            WorkerPid = sk_utils:start_worker(Monitor, WorkFlow, ReordererPid),
+            sk_monitor:spawn(Monitor, self(), sk_ord_tagger, start, [WorkerPid])
+    end.
