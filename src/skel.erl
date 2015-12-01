@@ -37,6 +37,19 @@ run(WorkFlow, Input) ->
     sk_assembler:run(Monitor, WorkFlow, Input),
     Monitor.
 
+receive_loop(Monitor) ->
+    receive
+        {'EXIT', _, normal} ->
+            receive_loop(Monitor);
+        {'EXIT', _, _} ->
+            error("Skel: error");
+        {sink_results, Results} ->
+            Monitor ! {system, eos},
+            Results;
+        X ->
+            io:format("X: ~p~n", [X])
+    end.
+
 -spec do(workflow(), list()) -> list().
 %% @doc The second entry-point function to the Skel library. This function
 %% <em>does</em> receive and return the results of the given workflow.
@@ -51,15 +64,7 @@ run(WorkFlow, Input) ->
 %%
 do(WorkFlow, Input) ->
     Monitor = run(WorkFlow, Input),
-    receive
-        {'EXIT', Monitor, _} ->
-            error("Skel: error");
-        {sink_results, Results} ->
-            Monitor ! {system, eos},
-            Results;
-        X ->
-            io:format("X: ~p~n", [X])
-    end.
+    receive_loop(Monitor).
 
 -spec farm(fun()) -> wf_item().
 farm(Fun) ->

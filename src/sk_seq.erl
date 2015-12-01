@@ -44,11 +44,8 @@
 %% as an argument.
 make(Monitor, WorkerFun) ->
     fun(NextPid) ->
-            Monitor ! {spawn, self(), ?MODULE, start, [WorkerFun, NextPid]},
-            receive
-                R when is_pid(R) ->
-                    R
-            end
+            sk_monitor:spawn(Monitor, self(),
+                             ?MODULE, start, [WorkerFun, NextPid])
     end.
 
 -spec start(worker_fun(), pid()) -> eos.

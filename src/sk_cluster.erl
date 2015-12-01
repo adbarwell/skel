@@ -2,28 +2,28 @@
 %%% @author Sam Elliott <ashe@st-andrews.ac.uk>
 %%% @copyright 2012 University of St Andrews (See LICENCE)
 %%% @headerfile "skel.hrl"
-%%% 
-%%% @doc This module contains the intitialisation logic of a Cluster wrapper. 
 %%%
-%%% The cluster wrapper acts in a similar manner to the Map skeleton, but 
-%%% allows the developer to customise the decomposition and recomposition 
-%%% functions used. Inputs are decomposed according to the developer-defined 
-%%% decomposition function, and then passed to the worker process running the 
+%%% @doc This module contains the intitialisation logic of a Cluster wrapper.
+%%%
+%%% The cluster wrapper acts in a similar manner to the Map skeleton, but
+%%% allows the developer to customise the decomposition and recomposition
+%%% functions used. Inputs are decomposed according to the developer-defined
+%%% decomposition function, and then passed to the worker process running the
 %%% inner-workflow.
 %%%
-%%% Additionally, the cluster wrapper allows the developer to determine the 
+%%% Additionally, the cluster wrapper allows the developer to determine the
 %%% level of clustering of inputs. Hence, the identifying atom `cluster'.
-%%% 
-%%% 
+%%%
+%%%
 %%% === Example ===
-%%% 
+%%%
 %%% 	```skel:do([{cluster, [{farm, [{seq, fun ?MODULE:f/1}], 10}], fun ?MODULE:decomp/1, fun ?MODULE:recomp/1}], Input).'''
-%%% 
-%%% 	We are able to replicate the second Map example using the above 
+%%%
+%%% 	We are able to replicate the second Map example using the above
 %%% 	cluster workflow item. Where `decomp/1' and `recomp/1' are developer-
-%%% 	defined, and `f/1' remains the function to be mapped to each element 
-%%% 	in every input. Here we use an inner task farm with the ten workers to 
-%%% 	repeatedly apply `f/1' to each partite element, but a different 
+%%% 	defined, and `f/1' remains the function to be mapped to each element
+%%% 	in every input. Here we use an inner task farm with the ten workers to
+%%% 	repeatedly apply `f/1' to each partite element, but a different
 %%% 	arrangement of nested skeletons may also be used.
 %%%
 %%% @end
@@ -33,30 +33,32 @@
 -module(sk_cluster).
 
 -export([
-         make/3,
-	 make_hyb/4,
-	 make_hyb/5,
-	 make_hyb/7
+         make/4,
+         make_hyb/5,
+         make_hyb/6,
+         make_hyb/8
         ]).
 
--include("skel.hrl").
+-include("../include/skel.hrl").
 
 -ifdef(TEST).
 -compile(export_all).
 -endif.
 
--spec make(workflow(), decomp_fun(), recomp_fun()) -> fun((pid()) -> pid()).
-%% @doc Initialises the Cluster wrapper using both the developer-defined 
-%% functions under `Decomp' and `Recomp' as decomposition and recomposition 
-%% functions respectively. 
-%% 
-%% Inputs are decomposed, sent through the specified (inner) workflow, and 
+-spec make(pid(), workflow(), decomp_fun(), recomp_fun()) -> fun((pid()) -> pid()).
+%% @doc Initialises the Cluster wrapper using both the developer-defined
+%% functions under `Decomp' and `Recomp' as decomposition and recomposition
+%% functions respectively.
+%%
+%% Inputs are decomposed, sent through the specified (inner) workflow, and
 %% then recomposed to be delivered as output.
-make(WorkFlow, Decomp, Recomp) ->
+make(Monitor, WorkFlow, Decomp, Recomp) ->
   fun(NextPid) ->
-    RecompPid = spawn(sk_cluster_recomp, start, [Recomp, NextPid]),
-    WorkerPid = sk_utils:start_worker(WorkFlow, RecompPid),
-    spawn(sk_cluster_decomp, start, [Decomp, WorkerPid])
+    RecompPid = sk_monitor:spawn(Monitor, self(),
+                                 sk_cluster_recomp, start, [Recomp, NextPid]),
+    WorkerPid = sk_utils:start_worker(Monitor, WorkFlow, RecompPid),
+    sk_monitor:spawn(Monitor, self(),
+                     sk_cluster_decomp, start, [Decomp, WorkerPid])
   end.
 
 ceiling(X) ->
@@ -88,7 +90,7 @@ calculate_ratio(TimeRatio, NTasks, NCPUW, NGPUW) ->
 	   end,
     Ratio = lists:foldl(fun(Elem,Acc) -> FooBar = Time(Elem, NTasks-Elem),
 					 if
-					    (FooBar < element(1,Acc)) or (element(1,Acc) == -1) 
+					    (FooBar < element(1,Acc)) or (element(1,Acc) == -1)
 					     -> {FooBar, Elem};
 					    true -> Acc
 					end end,
@@ -123,32 +125,74 @@ hyb_cluster_decomp_default(TimeRatio, StructSizeFun, MakeChunkFun, NCPUWorkers, 
     GPUChunkSizes = calculate_chunk_sizes(GPUItems, NGPUWorkers),
     [create_task_list(CPUChunkSizes, GPUChunkSizes, MakeChunkFun, Input)].
 
--spec make_hyb(workflow(), decomp_fun(), recomp_fun(), pos_integer(), pos_integer()) -> fun((pid()) -> pid()).
-make_hyb(Workflow, Decomp, Recomp, NCPUWorkers, NGPUWorkers) ->
+-spec make_hyb(pid(), workflow(), decomp_fun(), recomp_fun(), pos_integer(), pos_integer()) -> fun((pid()) -> pid()).
+make_hyb(Monitor, Workflow, Decomp, Recomp, NCPUWorkers, NGPUWorkers) ->
     fun(NextPid) ->
-	    RecompPid = spawn(sk_cluster_recomp, start, [Recomp, NextPid]),
-	    WorkerPid = sk_utils:start_worker_hyb(Workflow, RecompPid, NCPUWorkers, NGPUWorkers),
-	    spawn(sk_cluster_decomp, start, [fun (Input) -> hyb_cluster_decomp(Decomp, NCPUWorkers, NGPUWorkers, Input) end,
+	    RecompPid = sk_monitor:spawn(Monitor, self(),
+                                   sk_cluster_recomp, start, [Recomp, NextPid]),
+	    WorkerPid = sk_utils:start_worker_hyb(Monitor,
+                                            Workflow,
+                                            RecompPid,
+                                            NCPUWorkers,
+                                            NGPUWorkers),
+	    sk_monitor:spawn(Monitor, self(),
+                       sk_cluster_decomp, start,
+                       [fun(Input) ->
+                                hyb_cluster_decomp(Decomp,
+                                                   NCPUWorkers,
+                                                   NGPUWorkers,
+                                                   Input)
+                        end,
 					    WorkerPid])
     end.
 
--spec make_hyb(workflow(), float(), fun((any()) -> pos_integer()), fun((any(),pos_integer()) -> pos_integer()),
+-spec make_hyb(pid(), workflow(), float(), fun((any()) -> pos_integer()), fun((any(),pos_integer()) -> pos_integer()),
 	       fun((any())->any()),
 	       pos_integer(), pos_integer()) -> fun((pid()) -> pid()).
-make_hyb(Workflow, TimeRatio, StructSizeFun, MakeChunkFun, RecompFun, NCPUWorkers, NGPUWorkers) ->
+make_hyb(Monitor, Workflow, TimeRatio, StructSizeFun, MakeChunkFun, RecompFun, NCPUWorkers, NGPUWorkers) ->
     fun(NextPid) ->
-	    RecompPid = spawn(sk_cluster_recomp, start, [RecompFun, NextPid]),
-	    WorkerPid = sk_utils:start_worker_hyb(Workflow, RecompPid, NCPUWorkers, NGPUWorkers),
-	    spawn(sk_cluster_decomp, start, [fun (Input) -> hyb_cluster_decomp_default(TimeRatio, StructSizeFun, MakeChunkFun, NCPUWorkers, NGPUWorkers, Input) end,
-					    WorkerPid])
+	    RecompPid = sk_monitor:spawn(Monitor, self(),
+                                   sk_cluster_recomp, start,
+                                   [RecompFun, NextPid]),
+	    WorkerPid = sk_utils:start_worker_hyb(Monitor,
+                                            Workflow,
+                                            RecompPid,
+                                            NCPUWorkers,
+                                            NGPUWorkers),
+	    sk_monitor:spawn(Monitor, self(),
+                       sk_cluster_decomp, start,
+                       [fun(Input) ->
+                                hyb_cluster_decomp_default(TimeRatio,
+                                                           StructSizeFun,
+                                                           MakeChunkFun,
+                                                           NCPUWorkers,
+                                                           NGPUWorkers,
+                                                           Input)
+                        end, WorkerPid])
     end.
-    
--spec make_hyb(workflow(), float(), pos_integer(), pos_integer()) -> fun((pid())->pid()).
-make_hyb(Workflow, TimeRatio, NCPUWorkers, NGPUWorkers) ->
+
+-spec make_hyb(pid(), workflow(), float(), pos_integer(), pos_integer()) -> fun((pid())->pid()).
+make_hyb(Monitor, Workflow, TimeRatio, NCPUWorkers, NGPUWorkers) ->
     fun(NextPid) ->
-	    RecompPid = spawn(sk_cluster_recomp, start, [fun lists:flatten/1, NextPid]),
-	    WorkerPid = sk_utils:start_worker_hyb(Workflow, RecompPid, NCPUWorkers, NGPUWorkers),
-	    spawn(sk_cluster_decomp, start, [fun (Input) -> hyb_cluster_decomp_default(TimeRatio, fun length/1,fun (Data,Pos) -> lists:split(Pos,Data) end, NCPUWorkers, NGPUWorkers, Input) end,
-					    WorkerPid])
+            RecompPid = sk_monitor:spawn(Monitor, self(),
+                                         sk_cluster_recomp, start,
+                                         [fun lists:flatten/1, NextPid]),
+            WorkerPid = sk_utils:start_worker_hyb(Monitor,
+                                                  Workflow,
+                                                  RecompPid,
+                                                  NCPUWorkers,
+                                                  NGPUWorkers),
+            sk_monitor:spawn(
+              Monitor, self(),
+              sk_cluster_decomp, start,
+              [fun(Input) ->
+                       hyb_cluster_decomp_default(TimeRatio,
+                                                  fun length/1,
+                                                  fun(Data,Pos) ->
+                                                          lists:split(Pos,Data)
+                                                  end,
+                                                  NCPUWorkers,
+                                                  NGPUWorkers,
+                                                  Input)
+               end, WorkerPid])
     end.
-    

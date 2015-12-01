@@ -72,32 +72,32 @@ parse_hyb(Monitor, Section, NCPUWorkers, NGPUWorkers) ->
 %% @doc Determines the course of action to be taken according to the type of
 %% workflow specified. Constructs and starts specific skeleton instances.
 parse(Monitor, Fun) when is_function(Fun, 1) ->
-  parse(Monitor, {func, Fun});
+    parse(Monitor, {func, Fun});
 parse(Monitor, {func, Fun}) when is_function(Fun, 1) ->
-  sk_seq:make(Monitor, Fun);
+    sk_seq:make(Monitor, Fun);
 parse(Monitor, {seq, Fun}) when is_function(Fun, 1) ->
-  sk_seq:make(Monitor, Fun);
+    sk_seq:make(Monitor, Fun);
 parse(Monitor, {pipe, WorkFlow}) ->
-  sk_pipe:make(Monitor, WorkFlow);
+    sk_pipe:make(Monitor, WorkFlow);
 parse(Monitor, {ord, WorkFlow}) ->
-  sk_ord:make(Monitor, WorkFlow);
+    sk_ord:make(Monitor, WorkFlow);
 parse(Monitor, {farm, WorkFlow}) ->
-  sk_farm:make(Monitor, sk_utils:cores_available(), WorkFlow);
+    sk_farm:make(Monitor, sk_utils:cores_available(), WorkFlow);
 parse(Monitor, {farm, WorkFlow, NWorkers}) ->
-  sk_farm:make(Monitor, NWorkers, WorkFlow);
+    sk_farm:make(Monitor, NWorkers, WorkFlow);
 parse(Monitor, {hyb_farm, WorkFlowCPU, WorkFlowGPU, NCPUWorkers, NGPUWorkers}) ->
-  sk_farm:make_hyb(Monitor, NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU);
+    sk_farm:make_hyb(Monitor, NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU);
 parse(Monitor, {map, WorkFlow}) ->
-  sk_map:make(WorkFlow);
+    sk_map:make(Monitor, WorkFlow);
 parse(Monitor, {map, WorkFlow, NWorkers}) ->
-  sk_map:make(WorkFlow, NWorkers);
+    sk_map:make(Monitor, WorkFlow, NWorkers);
 parse(Monitor, {hyb_map, WorkFlowCPU, WorkFlowGPU}) ->
     sk_map:make_hyb(Monitor, WorkFlowCPU, WorkFlowGPU);
 parse(Monitor, {hyb_map, WorkFlowCPU, WorkFlowGPU, NCPUWorkers, NGPUWorkers}) ->
-  sk_map:make_hyb(Monitor, WorkFlowCPU, WorkFlowGPU, NCPUWorkers, NGPUWorkers);
+    sk_map:make_hyb(Monitor, WorkFlowCPU, WorkFlowGPU, NCPUWorkers, NGPUWorkers);
 parse(Monitor, {cluster, WorkFlow, Decomp, Recomp}) when is_function(Decomp, 1),
-                                               is_function(Recomp, 1) ->
-  sk_cluster:make(WorkFlow, Decomp, Recomp);
+                                                         is_function(Recomp, 1) ->
+    sk_cluster:make(Monitor, WorkFlow, Decomp, Recomp);
 parse(Monitor, {hyb_cluster, WorkFlow, Decomp, Recomp, NCPUWorkers, NGPUWorkers}) when
       is_function(Decomp, 1), is_function(Recomp, 1) ->
     sk_cluster:make_hyb(Monitor, WorkFlow, Decomp, Recomp, NCPUWorkers, NGPUWorkers);
@@ -105,15 +105,8 @@ parse(Monitor, {hyb_cluster, WorkFlow, TimeRatio, NCPUWorkers, NGPUWorkers}) ->
     sk_cluster:make_hyb(Monitor, WorkFlow, TimeRatio, NCPUWorkers, NGPUWorkers);
 parse(Monitor, {hyb_cluster, WorkFlow, TimeRatio, StructSizeFun, MakeChunkFun, RecompFun, NCPUWorkers, NGPUWorkers}) ->
     sk_cluster:make_hyb(Monitor, WorkFlow, TimeRatio, StructSizeFun, MakeChunkFun, RecompFun, NCPUWorkers, NGPUWorkers);
-
-% parse({decomp, WorkFlow, Decomp, Recomp}) when is_function(Decomp, 1),
-%                                                is_function(Recomp, 1) ->
-%   sk_decomp:make(WorkFlow, Decomp, Recomp);
-% parse({map, WorkFlow, Decomp, Recomp}) when is_function(Decomp, 1),
-%                                             is_function(Recomp, 1) ->
-%   sk_map:make(WorkFlow, Decomp, Recomp);
 parse(Monitor, {reduce, Reduce, Decomp}) when is_function(Reduce, 2),
-                                     is_function(Decomp, 1) ->
-  sk_reduce:make(Decomp, Reduce);
+                                              is_function(Decomp, 1) ->
+    sk_reduce:make(Monitor, Decomp, Reduce);
 parse(Monitor, {feedback, WorkFlow, Filter}) when is_function(Filter, 1) ->
-  sk_feedback:make(WorkFlow, Filter).
+    sk_feedback:make(Monitor, WorkFlow, Filter).
