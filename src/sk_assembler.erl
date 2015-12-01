@@ -76,6 +76,8 @@ parse(Monitor, Fun) when is_function(Fun, 1) ->
 parse(Monitor, {func, Fun}) when is_function(Fun, 1) ->
     sk_seq:make(Monitor, Fun);
 parse(Monitor, {seq, Fun}) when is_function(Fun, 1) ->
+    io:format("~n*** Skel: the seq skeleton is deprecated,"
+              ++ " please use func instead.~n~n"),
     sk_seq:make(Monitor, Fun);
 parse(Monitor, {pipe, WorkFlow}) ->
     sk_pipe:make(Monitor, WorkFlow);
