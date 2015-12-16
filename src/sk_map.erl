@@ -55,9 +55,9 @@
 %% {@link sk_map_partitioner} process.
 make(Monitor, WorkFlow) ->
   fun(NextPid) ->
-    CombinerPid = sk_monitor:spawn(Monitor, self(),
+    CombinerPid = sk_monitor:spawn(Monitor,
                                    sk_map_combiner, start, [NextPid]),
-    sk_monitor:spawn(Monitor, self(),
+    sk_monitor:spawn(Monitor,
                      sk_map_partitioner, start,
                      [Monitor, auto, WorkFlow, CombinerPid])
   end.
@@ -74,10 +74,10 @@ make(Monitor, WorkFlow) ->
 %% their Pids passed to a {@link sk_map_partitioner} process.
 make(Monitor, WorkFlow, NWorkers) ->
   fun(NextPid) ->
-    CombinerPid = sk_monitor:spawn(Monitor, self(),
+    CombinerPid = sk_monitor:spawn(Monitor,
                                    sk_map_combiner, start, [NextPid, NWorkers]),
     WorkerPids = sk_utils:start_workers(Monitor, NWorkers, WorkFlow, CombinerPid),
-    sk_monitor:spawn(Monitor, self(),
+    sk_monitor:spawn(Monitor,
                      sk_map_partitioner, start, [man, WorkerPids, CombinerPid])
   end.
 
@@ -92,7 +92,7 @@ make(Monitor, WorkFlow, NWorkers) ->
 %% their Pids passed to a {@link sk_map_partitioner} process.
 make_hyb(Monitor, WorkFlowCPU, WorkFlowGPU, NCPUWorkers, NGPUWorkers) ->
   fun(NextPid) ->
-    CombinerPid = sk_monitor:spawn(Monitor, self(),
+    CombinerPid = sk_monitor:spawn(Monitor,
                                    sk_map_combiner,
                                    start, [NextPid, NCPUWorkers+NGPUWorkers]),
     {CPUWorkerPids, GPUWorkerPids} =
@@ -102,7 +102,7 @@ make_hyb(Monitor, WorkFlowCPU, WorkFlowGPU, NCPUWorkers, NGPUWorkers) ->
                                          WorkFlowCPU,
                                          WorkFlowGPU,
                                          CombinerPid),
-    sk_monitor:spawn(Monitor, self(),
+    sk_monitor:spawn(Monitor,
                      sk_map_partitioner,
                      start_hyb,
                      [Monitor, man, CPUWorkerPids, GPUWorkerPids, CombinerPid])

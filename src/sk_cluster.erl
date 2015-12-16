@@ -54,10 +54,10 @@
 %% then recomposed to be delivered as output.
 make(Monitor, WorkFlow, Decomp, Recomp) ->
   fun(NextPid) ->
-    RecompPid = sk_monitor:spawn(Monitor, self(),
+    RecompPid = sk_monitor:spawn(Monitor,
                                  sk_cluster_recomp, start, [Recomp, NextPid]),
     WorkerPid = sk_utils:start_worker(Monitor, WorkFlow, RecompPid),
-    sk_monitor:spawn(Monitor, self(),
+    sk_monitor:spawn(Monitor,
                      sk_cluster_decomp, start, [Decomp, WorkerPid])
   end.
 
@@ -128,14 +128,14 @@ hyb_cluster_decomp_default(TimeRatio, StructSizeFun, MakeChunkFun, NCPUWorkers, 
 -spec make_hyb(pid(), workflow(), decomp_fun(), recomp_fun(), pos_integer(), pos_integer()) -> fun((pid()) -> pid()).
 make_hyb(Monitor, Workflow, Decomp, Recomp, NCPUWorkers, NGPUWorkers) ->
     fun(NextPid) ->
-	    RecompPid = sk_monitor:spawn(Monitor, self(),
+	    RecompPid = sk_monitor:spawn(Monitor,
                                    sk_cluster_recomp, start, [Recomp, NextPid]),
 	    WorkerPid = sk_utils:start_worker_hyb(Monitor,
                                             Workflow,
                                             RecompPid,
                                             NCPUWorkers,
                                             NGPUWorkers),
-	    sk_monitor:spawn(Monitor, self(),
+	    sk_monitor:spawn(Monitor,
                        sk_cluster_decomp, start,
                        [fun(Input) ->
                                 hyb_cluster_decomp(Decomp,
@@ -151,7 +151,7 @@ make_hyb(Monitor, Workflow, Decomp, Recomp, NCPUWorkers, NGPUWorkers) ->
 	       pos_integer(), pos_integer()) -> fun((pid()) -> pid()).
 make_hyb(Monitor, Workflow, TimeRatio, StructSizeFun, MakeChunkFun, RecompFun, NCPUWorkers, NGPUWorkers) ->
     fun(NextPid) ->
-	    RecompPid = sk_monitor:spawn(Monitor, self(),
+	    RecompPid = sk_monitor:spawn(Monitor,
                                    sk_cluster_recomp, start,
                                    [RecompFun, NextPid]),
 	    WorkerPid = sk_utils:start_worker_hyb(Monitor,
@@ -159,7 +159,7 @@ make_hyb(Monitor, Workflow, TimeRatio, StructSizeFun, MakeChunkFun, RecompFun, N
                                             RecompPid,
                                             NCPUWorkers,
                                             NGPUWorkers),
-	    sk_monitor:spawn(Monitor, self(),
+	    sk_monitor:spawn(Monitor,
                        sk_cluster_decomp, start,
                        [fun(Input) ->
                                 hyb_cluster_decomp_default(TimeRatio,
@@ -174,7 +174,7 @@ make_hyb(Monitor, Workflow, TimeRatio, StructSizeFun, MakeChunkFun, RecompFun, N
 -spec make_hyb(pid(), workflow(), float(), pos_integer(), pos_integer()) -> fun((pid())->pid()).
 make_hyb(Monitor, Workflow, TimeRatio, NCPUWorkers, NGPUWorkers) ->
     fun(NextPid) ->
-            RecompPid = sk_monitor:spawn(Monitor, self(),
+            RecompPid = sk_monitor:spawn(Monitor,
                                          sk_cluster_recomp, start,
                                          [fun lists:flatten/1, NextPid]),
             WorkerPid = sk_utils:start_worker_hyb(Monitor,
@@ -183,7 +183,7 @@ make_hyb(Monitor, Workflow, TimeRatio, NCPUWorkers, NGPUWorkers) ->
                                                   NCPUWorkers,
                                                   NGPUWorkers),
             sk_monitor:spawn(
-              Monitor, self(),
+              Monitor,
               sk_cluster_decomp, start,
               [fun(Input) ->
                        hyb_cluster_decomp_default(TimeRatio,

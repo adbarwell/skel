@@ -36,7 +36,7 @@
 %% `NextPid'.
 make(Monitor, Decomp, Reduce) ->
   fun(NextPid) ->
-    sk_monitor:spawn(Monitor, self(),
+    sk_monitor:spawn(Monitor,
                      sk_reduce_decomp, start, [Decomp, Reduce, NextPid])
   end.
 

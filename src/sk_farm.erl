@@ -33,18 +33,17 @@
 make(Monitor, NWorkers, WorkFlow) ->
   fun(NextPid) ->
     CollectorPid =
-              sk_monitor:spawn(Monitor, self(),
+              sk_monitor:spawn(Monitor,
                                sk_farm_collector, start, [NWorkers, NextPid]),
     WorkerPids =
               sk_utils:start_workers(Monitor, NWorkers, WorkFlow, CollectorPid),
-    sk_monitor:spawn(Monitor, self(), sk_farm_emitter, start, [WorkerPids])
+    sk_monitor:spawn(Monitor, sk_farm_emitter, start, [WorkerPids])
   end.
 
 -spec make_hyb(pid(), pos_integer(), pos_integer(), workflow(), workflow()) -> maker_fun().
 make_hyb(Monitor, NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU) ->
     fun(NextPid) ->
             CollectorPid = sk_monitor:spawn(Monitor,
-                                            self(),
                                             sk_farm_collector,
                                             start,
                                             [NCPUWorkers+NGPUWorkers, NextPid]),
@@ -54,6 +53,6 @@ make_hyb(Monitor, NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU) ->
                                                     WorkFlowCPU,
                                                     WorkFlowGPU,
                                                     CollectorPid),
-            sk_monitor:spawn(Monitor, self(),
+            sk_monitor:spawn(Monitor,
                              sk_farm_emitter, start, [WorkerPids])
     end.

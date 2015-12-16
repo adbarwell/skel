@@ -37,13 +37,13 @@
 make(Monitor, WorkFlow, FilterFun) ->
   fun(NextPid) ->
     Ref = make_ref(),
-    CounterPid = sk_monitor:spawn(Monitor, self(),
+    CounterPid = sk_monitor:spawn(Monitor,
                                   sk_feedback_bicounter, start, []),
-    FilterPid = sk_monitor:spawn(Monitor, self(),
+    FilterPid = sk_monitor:spawn(Monitor,
                                  sk_feedback_filter, start,
                                  [FilterFun, Ref, CounterPid, NextPid]),
     WorkerPid = sk_utils:start_worker(Monitor, WorkFlow, FilterPid),
-    sk_monitor:spawn(Monitor, self(),
+    sk_monitor:spawn(Monitor,
                      sk_feedback_receiver, start,
                      [Ref, CounterPid, FilterPid, WorkerPid])
   end.

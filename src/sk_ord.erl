@@ -41,8 +41,7 @@
 make(Monitor, WorkFlow) ->
     fun(NextPid) ->
             ReordererPid = sk_monitor:spawn(Monitor,
-                                            self(),
                                             sk_ord_reorderer, start, [NextPid]),
             WorkerPid = sk_utils:start_worker(Monitor, WorkFlow, ReordererPid),
-            sk_monitor:spawn(Monitor, self(), sk_ord_tagger, start, [WorkerPid])
+            sk_monitor:spawn(Monitor, sk_ord_tagger, start, [WorkerPid])
     end.
