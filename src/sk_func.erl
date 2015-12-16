@@ -25,7 +25,7 @@
 %%%
 %%% @end
 %%%----------------------------------------------------------------------------
--module(sk_seq).
+-module(sk_func).
 
 -export([
          start/2
@@ -44,7 +44,7 @@
 %% as an argument.
 make(Monitor, WorkerFun) ->
     fun(NextPid) ->
-            sk_monitor:spawn(Monitor, self(),
+            sk_monitor:spawn(Monitor,
                              ?MODULE, start, [WorkerFun, NextPid])
     end.
 
@@ -52,22 +52,33 @@ make(Monitor, WorkerFun) ->
 %% @doc Starts the worker process' task. Recursively receives the worker
 %% function's input, and applies it to said function.
 start(WorkerFun, NextPid) ->
-  sk_tracer:t(75, self(), {?MODULE, start}, [{next_pid, NextPid}]),
-  DataFun = sk_data:fmap(WorkerFun),
-  loop(DataFun, NextPid).
+    sk_tracer:t(75, self(), {?MODULE, start}, [{next_pid, NextPid}]),
+    DataFun = sk_data:fmap(WorkerFun),
+    loop(DataFun, NextPid).
 
 -spec loop(skel:data_fun(), pid()) -> eos.
 %% @doc Recursively receives and applies the input to the function `DataFun'.
 %% Sends the resulting data message to the process `NextPid'.
 loop(DataFun, NextPid) ->
-  receive
-    {data,_,_} = DataMessage ->
-      DataMessage1 = DataFun(DataMessage),
-      sk_tracer:t(50, self(), NextPid, {?MODULE, data}, [{input, DataMessage}, {output, DataMessage1}]),
-      NextPid ! DataMessage1,
-      loop(DataFun, NextPid);
-    {system, eos} ->
-      sk_tracer:t(75, self(), NextPid, {?MODULE, system}, [{message, eos}]),
-      NextPid ! {system, eos},
-      eos
-  end.
+    receive
+        {data,_,_} = DataMessage ->
+            case catch(DataFun(DataMessage)) of
+                {'EXIT', {_Reason, _Stack} = Err} ->
+                    %% Error handling here
+                    error({1, "Error when applying input to func",
+                           DataMessage, Err});
+                {'EXIT', Term} ->
+                    %% Error handling here
+                    error({2, "Error when applying input to func", Term});
+                {data, _, _} = DM1 ->
+                    sk_tracer:t(50, self(), NextPid,
+                                {?MODULE, data},
+                                [{input, DataMessage}, {output, DM1}]),
+                    NextPid ! DM1,
+                    loop(DataFun, NextPid)
+                end;
+        {system, eos} ->
+            sk_tracer:t(75, self(), NextPid, {?MODULE, system}, [{message, eos}]),
+            NextPid ! {system, eos},
+            eos
+    end.

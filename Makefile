@@ -1,5 +1,7 @@
 .PHONY : compile console typecheck typer clean tutorial
 
+ERLOPTS = +debug_info +warn_missing_spec +nowarn_unused_vars +nowarn_unused_function
+
 all: compile
 
 clean:
@@ -19,7 +21,7 @@ console: compile
 
 examples: compile
 	@echo "==> skel (examples)"
-	@erlc +debug_info -I include -o ebin examples/*.erl
+	@erlc $(ERLOPTS) -I include -o ebin examples/*.erl
 
 typecheck: compile .skel.plt
 	@echo "==> skel (typecheck)"

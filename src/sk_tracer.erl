@@ -5,7 +5,7 @@
 %%% @doc This module contains utility functions for tracing the execution of
 %%% skel programs.
 %%%
-%%% Most skel processes will emit events when they send messages, allowing 
+%%% Most skel processes will emit events when they send messages, allowing
 %%% the tracer to view them in a nice way. This is by far the easiest way to
 %%% debug the parallelism, rather than 'printf' statements.
 %%%
@@ -29,7 +29,7 @@
 -type contents() :: [{term(), term()}] | term().
 
 -spec start() -> 'ignore' | {'error',_} | {'ok',pid()}.
-%% @doc Opens a viewer displaying a graphic representation of currently 
+%% @doc Opens a viewer displaying a graphic representation of currently
 %% employed processes and the messages sent between them.
 start() ->
   et_viewer:start([
@@ -43,7 +43,7 @@ start() ->
                   ]).
 
 -spec report_event(detail_level(), actor(), actor(), label(), contents()) -> 'hopefully_traced'.
-%% @doc Reports a message between two processes. Base case; returns 
+%% @doc Reports a message between two processes. Base case; returns
 %% hopefully_traced where no errors are encountered.
 report_event(DetailLevel, From, To, Label, Contents) ->
   hopefully_traced.
@@ -54,7 +54,7 @@ t(DetailLevel, From, To, Label, Contents) ->
   ?MODULE:report_event(DetailLevel, From, To, Label, Contents).
 
 -spec report_event(detail_level(), actor(), label(), contents()) -> 'hopefully_traced'.
-%% @doc Reports a process event where no message is sent to a second process. 
+%% @doc Reports a process event where no message is sent to a second process.
 %% Primarily used in notification of a construct or process being constructed.
 report_event(DetailLevel, FromTo, Label, Contents) ->
   ?MODULE:report_event(DetailLevel, FromTo, FromTo, Label, Contents).
