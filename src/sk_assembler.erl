@@ -23,19 +23,19 @@
 -compile(export_all).
 -endif.
 
--spec make(pid(), workflow(), pid() | module()) -> pid() .
+-spec make(pid(), workflow(), {pid(), reference()} | module()) -> {pid(), reference()}.
 %% @doc Function to produce a set of processes according to the given workflow
 %% specification.
 make(Monitor, WorkFlow, EndModule) when is_atom(EndModule) ->
     DrainPid = (sk_sink:make(Monitor, EndModule))(self()),
     make(Monitor, WorkFlow, DrainPid);
-make(Monitor, WorkFlow, EndPid) when is_pid(EndPid), is_list(WorkFlow) ->
+make(Monitor, WorkFlow, EndPRef) when is_pid(element(1, EndPRef)), is_list(WorkFlow) ->
     MakeFns = [parse(Monitor, Section) || Section <- WorkFlow],
-    lists:foldr(fun(MakeFn, Pid) -> MakeFn(Pid) end, EndPid, MakeFns);
-make(Monitor,  WorkFlow, EndPid) when is_pid(EndPid), is_tuple(WorkFlow) ->
-    (parse(Monitor, WorkFlow))(EndPid);
-make(Monitor,  WorkFlow, EndPid) when is_pid(EndPid), is_function(WorkFlow) ->
-    (parse(Monitor, WorkFlow))(EndPid).
+    lists:foldr(fun(MakeFn, PRef) -> MakeFn(PRef) end, EndPRef, MakeFns);
+make(Monitor,  WorkFlow, EndPRef) when is_pid(element(1, EndPRef)), is_tuple(WorkFlow) ->
+    (parse(Monitor, WorkFlow))(EndPRef);
+make(Monitor,  WorkFlow, EndPRef) when is_pid(element(1, EndPRef)), is_function(WorkFlow) ->
+    (parse(Monitor, WorkFlow))(EndPRef).
 
 
 -spec make_hyb(pid(), workflow(), pid(), pos_integer(), pos_integer()) -> pid().
@@ -47,18 +47,17 @@ make_hyb(Monitor, WorkFlow, EndPid, NCPUWorkers, NGPUWorkers) when is_pid(EndPid
 -spec run(pid(), pid() | workflow(), input()) -> pid().
 %% @doc Function to produce and start a set of processes according to the
 %% given workflow specification and input.
-run(Monitor, WorkFlow, Input) when is_pid(WorkFlow) ->
+run(Monitor, WorkFlow, Input) when is_pid(element(1, WorkFlow)) ->
     Feeder = sk_source:make(Monitor, Input),
     Feeder(WorkFlow);
 run(Monitor, WorkFlow, Input) when is_list(WorkFlow) ->
-    DrainPid = (sk_sink:make())(self()),
-    AssembledWF = make(Monitor, WorkFlow, DrainPid),
+    DrainPRef = (sk_sink:make())(self()),
+    AssembledWF = make(Monitor, WorkFlow, DrainPRef),
     run(Monitor, AssembledWF, Input);
 run(Monitor, WorkFlow, Input) when is_tuple(WorkFlow) ->
     run(Monitor, make(Monitor, WorkFlow, (sk_sink:make(Monitor))(self())), Input);
 run(Monitor, WorkFlow, Input) when is_function(WorkFlow) ->
     run(Monitor, {func, WorkFlow}, Input).
-
 
 parse_hyb(Monitor, Section, NCPUWorkers, NGPUWorkers) ->
     case Section of
@@ -112,3 +111,4 @@ parse(Monitor, {reduce, Reduce, Decomp}) when is_function(Reduce, 2),
     sk_reduce:make(Monitor, Decomp, Reduce);
 parse(Monitor, {feedback, WorkFlow, Filter}) when is_function(Filter, 1) ->
     sk_feedback:make(Monitor, WorkFlow, Filter).
+

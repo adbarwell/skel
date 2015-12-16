@@ -41,35 +41,26 @@
 %% <tt>Pid</tt>.
 -spec make(pid(), input()) -> maker_fun().
 make(Monitor, Input) ->
-    fun(Pid) ->
-            Monitor ! {spawn, self(), ?MODULE, start, [Input, Pid]},
-            receive
-                R when is_pid(R) ->
-                    R
-            end
+    fun(PRef) ->
+            sk_monitor:spawn(Monitor, ?MODULE, start, [Input, PRef])
     end.
 
 %% @doc Transmits each input in <tt>Input</tt> to the process <tt>NextPid</tt>.
 %% @todo add documentation for the callback loop
--spec start(input(), pid()) -> 'eos'.
-start(Input, NextPid) when is_list(Input) ->
-    list_loop(Input, NextPid);
-start(InputMod, NextPid) when is_atom(InputMod) ->
+-spec start(input(), {pid(), reference()}) -> 'eos'.
+start(Input, NextPRef) when is_list(Input) ->
+    lists:foreach(fun(X) ->
+                          send_input(X, NextPRef)
+                  end, Input),
+    send_eos(NextPRef);
+start(InputMod, NextPRef) when is_atom(InputMod) ->
     io:format("InputMod: ~p~n", [InputMod]),
     case InputMod:init() of
-        {ok, State} -> callback_loop(InputMod, State, NextPid);
+        {ok, State} -> callback_loop(InputMod, State, NextPRef);
         {no_inputs, State}  ->
-            send_eos(NextPid),
+            send_eos(NextPRef),
             InputMod:terminate(State)
     end.
-
-%% @doc Recursively sends each input in a given list to the process
-%% <tt>NextPid</tt>.
-list_loop([], NextPid) ->
-  send_eos(NextPid);
-list_loop([Input|Inputs], NextPid) ->
-  send_input(Input, NextPid),
-  list_loop(Inputs, NextPid).
 
 %% @todo doc
 callback_loop(InputMod, State, NextPid) ->
@@ -87,12 +78,12 @@ callback_loop(InputMod, State, NextPid) ->
 
 %% @doc <tt>Input</tt> is formatted as a data message and sent to the
 %% process <tt>NextPid</tt>.
-send_input(Input, NextPid) ->
+send_input(Input, {NextPid, _}) ->
   DataMessage = sk_data:pure(Input),
   sk_tracer:t(50, self(), NextPid, {?MODULE, data}, [{output, DataMessage}]),
   NextPid ! DataMessage.
 
-send_eos(NextPid) ->
+send_eos({NextPid, _}) ->
   sk_tracer:t(75, self(), NextPid, {?MODULE, system}, [{msg, eos}]),
   NextPid ! {system, eos},
   eos.

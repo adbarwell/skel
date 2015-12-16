@@ -43,23 +43,23 @@
 %% Returns an anonymous function that takes the parent process `NextPid'
 %% as an argument.
 make(Monitor, WorkerFun) ->
-    fun(NextPid) ->
+    fun(NextPRef) ->
             sk_monitor:spawn(Monitor,
-                             ?MODULE, start, [WorkerFun, NextPid])
+                             ?MODULE, start, [WorkerFun, NextPRef])
     end.
 
--spec start(worker_fun(), pid()) -> eos.
+-spec start(worker_fun(), {pid(), reference()}) -> eos.
 %% @doc Starts the worker process' task. Recursively receives the worker
 %% function's input, and applies it to said function.
-start(WorkerFun, NextPid) ->
-    sk_tracer:t(75, self(), {?MODULE, start}, [{next_pid, NextPid}]),
+start(WorkerFun, NextPRef) ->
+    sk_tracer:t(75, self(), {?MODULE, start}, [{next_pid, NextPRef}]),
     DataFun = sk_data:fmap(WorkerFun),
-    loop(DataFun, NextPid).
+    loop(DataFun, NextPRef).
 
--spec loop(skel:data_fun(), pid()) -> eos.
+-spec loop(skel:data_fun(), {pid(), reference()}) -> eos.
 %% @doc Recursively receives and applies the input to the function `DataFun'.
 %% Sends the resulting data message to the process `NextPid'.
-loop(DataFun, NextPid) ->
+loop(DataFun, {NextPid, _} = NextPRef) ->
     receive
         {data,_,_} = DataMessage ->
             case catch(DataFun(DataMessage)) of
@@ -71,11 +71,11 @@ loop(DataFun, NextPid) ->
                     %% Error handling here
                     error({2, "Error when applying input to func", Term});
                 {data, _, _} = DM1 ->
-                    sk_tracer:t(50, self(), NextPid,
+                    sk_tracer:t(50, self(), NextPRef,
                                 {?MODULE, data},
                                 [{input, DataMessage}, {output, DM1}]),
                     NextPid ! DM1,
-                    loop(DataFun, NextPid)
+                    loop(DataFun, NextPRef)
                 end;
         {system, eos} ->
             sk_tracer:t(75, self(), NextPid, {?MODULE, system}, [{message, eos}]),

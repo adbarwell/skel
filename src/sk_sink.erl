@@ -46,11 +46,7 @@
 %% to.
 make(Monitor) ->
     fun(Pid) ->
-            Monitor ! {spawn, self(), ?MODULE, start_acc, [Pid]},
-            receive
-                R when is_pid(R) ->
-                    R
-            end
+            sk_monitor:spawn(Monitor, ?MODULE, start_acc, [Pid])
     end.
 
 -spec make(pid(), module()) -> maker_fun().

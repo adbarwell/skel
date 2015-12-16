@@ -19,8 +19,8 @@ loop(Ps) ->
               [Pid, Ref, St]),
             error("Process Down");
         {spawn, From, M, F, A} ->
-            {Pid, Ref} = spawn_monitor(M, F, A),
-            From ! Pid,
+            {Pid, Ref} = PRef =  spawn_monitor(M, F, A),
+            From ! PRef,
             loop(dict:append(Ref, Pid, Ps));
         {system, eos} ->
             sk_tracer:t(75, self(), {?MODULE, system}, [{msg, eos}]),
@@ -33,10 +33,12 @@ loop(Ps) ->
 start() ->
     spawn_link(?MODULE, loop, [dict:new()]).
 
--spec spawn(pid(), module(), atom(), list()) -> pid().
+-spec spawn(pid(), module(), atom(), list()) -> {pid(), reference()}.
 spawn(Monitor, M, F, A) ->
     Monitor ! {spawn, self(), M, F, A},
     receive
-        R when is_pid(R) ->
-            R
+        {P, R} = PRef when is_pid(P), is_reference(R) ->
+            PRef;
+        X ->
+            io:format("X: ~p~n", [X])
     end.
