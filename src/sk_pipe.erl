@@ -36,6 +36,6 @@
 %% @doc Produces workers according to the specified workflow. Returns an
 %% anonymous function taking the Pid of the parent process `NextPid'.
 make(Monitor, WorkFlow) ->
-  fun(NextPid) ->
-    sk_assembler:make(Monitor, WorkFlow, NextPid)
+  fun(NextPRef) ->
+    sk_assembler:make(Monitor, WorkFlow, NextPRef)
   end.

@@ -39,9 +39,9 @@
 %% @doc Constructs an Ord skeleton wrapper to ensure the outputs of the
 %% specified workflow are in the same order as that of its inputs.
 make(Monitor, WorkFlow) ->
-    fun(NextPid) ->
-            ReordererPid = sk_monitor:spawn(Monitor,
-                                            sk_ord_reorderer, start, [NextPid]),
-            WorkerPid = sk_utils:start_worker(Monitor, WorkFlow, ReordererPid),
-            sk_monitor:spawn(Monitor, sk_ord_tagger, start, [WorkerPid])
+    fun(NextPRef) ->
+            ReordererPRef = sk_monitor:spawn(Monitor,
+                                            sk_ord_reorderer, start, [NextPRef]),
+            WorkerPRef = sk_utils:start_worker(Monitor, WorkFlow, ReordererPRef),
+            sk_monitor:spawn(Monitor, sk_ord_tagger, start, [WorkerPRef])
     end.

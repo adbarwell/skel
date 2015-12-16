@@ -25,25 +25,25 @@
 
 %% @doc Starts the tagger, labelling each input so that the order of all
 %% inputs is recorded.
--spec start(pid()) -> 'eos'.
-start(NextPid) ->
+-spec start({pid(), reference()}) -> 'eos'.
+start(NextPRef) ->
   sk_tracer:t(75, self(), {?MODULE, start}, []),
-  loop(1, NextPid).
+  loop(1, NextPRef).
 
--spec loop(pos_integer(), pid()) -> 'eos'.
+-spec loop(pos_integer(), {pid(), reference()}) -> 'eos'.
 %% @doc Recursively receives input, adds an additional identifier to that
 %% input, and sends the input onwards. These identifiers are just a counter,
 %% with each input receiving the indentifier indicating how many inputs were
 %% seen before.
-loop(Idx, NextPid) ->
+loop(Idx, {NextPid, _ } = NextPRef) ->
   receive
     {data, _, _} = DataMessage ->
       DataMessage1 = sk_data:push({ord, Idx}, DataMessage),
-      sk_tracer:t(50, self(), NextPid, {?MODULE, data}, [{input, DataMessage}, {output, DataMessage1}]),
+      sk_tracer:t(50, self(), NextPRef, {?MODULE, data}, [{input, DataMessage}, {output, DataMessage1}]),
       NextPid ! DataMessage1,
-      loop(Idx+1, NextPid);
+      loop(Idx+1, NextPRef);
     {system, eos} ->
-      sk_tracer:t(75, self(), NextPid, {?MODULE, system}, [{message, eos}]),
+      sk_tracer:t(75, self(), NextPRef, {?MODULE, system}, [{message, eos}]),
       NextPid ! {system, eos},
       eos
   end.
