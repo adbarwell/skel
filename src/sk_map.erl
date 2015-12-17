@@ -43,9 +43,9 @@
 
 -export([make/2, make/3, make_hyb/5]).
 
--include("../include/skel.hrl").
+-include("skel.hrl").
 
--spec make(pid(), workflow()) -> maker_fun().
+-spec make(pref(), workflow()) -> maker_fun().
 %% @doc Initialises an instance of the Map skeleton ready to receive inputs,
 %% where the number of worker processes is automatic. The function or
 %% functions to be applied to said inputs are given under `WorkFlow'.
@@ -54,13 +54,13 @@
 %% workers. These workers are generated and managed from within a
 %% {@link sk_map_partitioner} process.
 make(Monitor, WorkFlow) ->
-  fun(NextPid) ->
-    CombinerPid = sk_monitor:spawn(Monitor,
-                                   sk_map_combiner, start, [NextPid]),
-    sk_monitor:spawn(Monitor,
-                     sk_map_partitioner, start,
-                     [Monitor, auto, WorkFlow, CombinerPid])
-  end.
+    fun(NextPRef) ->
+            CombinerPRef = sk_monitor:spawn(Monitor,
+                                            sk_map_combiner, start, [NextPRef]),
+            sk_monitor:spawn(Monitor,
+                             sk_map_partitioner, start,
+                             [Monitor, auto, WorkFlow, CombinerPRef])
+    end.
 
 
 -spec make(pid(), workflow(), pos_integer()) -> maker_fun().

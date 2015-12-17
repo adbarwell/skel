@@ -82,3 +82,9 @@
 %% constraint.
 
 -type pref() :: {pid(), reference()}.
+
+-ifndef(print).
+-define(print(Var),
+        io:format("~p:~p~n  ~p: ~p~n",
+                  [?MODULE, ?LINE, ??Var, Var])).
+-endif.

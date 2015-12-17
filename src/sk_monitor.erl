@@ -38,7 +38,7 @@ spawn(Monitor, M, F, A) ->
     Monitor ! {spawn, self(), M, F, A},
     receive
         {P, R} = PRef when is_pid(P), is_reference(R) ->
-            PRef;
-        X ->
-            io:format("X: ~p~n", [X])
+            PRef%;
+        %% X ->
+        %%     error({"Unexpected return value when spawning.", X})
     end.

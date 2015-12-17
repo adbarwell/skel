@@ -29,15 +29,16 @@ start_workers(Monitor, NWorkers, WorkFlow, NextPid) ->
 start_workers_hyb(Monitor, NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU, NextPid) ->
   start_workers_hyb(Monitor, NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU, NextPid, {[],[]}).
 
--spec start_workers(pid(), pos_integer(), workflow(), pid(), [pid()]) -> [pid()].
+-spec start_workers(pid(), pos_integer(), workflow(), pref(), [pref()]) -> [pref()].
 %% @doc Starts a given number <tt>NWorkers</tt> of workers as children to the
 %% specified process <tt>NextPid</tt>. Returns a list of worker Pids. Inner
 %% function to {@link start_workers/3}, providing storage for partial results.
-start_workers(_Monitor, NWorkers,_WorkFlow,_NextPid, WorkerPids) when NWorkers < 1 ->
-  WorkerPids;
-start_workers(Monitor, NWorkers, WorkFlow, NextPid, WorkerPids) ->
-  NewWorker = start_worker(Monitor, WorkFlow, NextPid),
-  start_workers(Monitor, NWorkers-1, WorkFlow, NextPid, [NewWorker|WorkerPids]).
+start_workers(_Monitor, NWorkers,_WorkFlow,_NextPid, WorkerPRefs) when
+      NWorkers < 1 ->
+    WorkerPRefs;
+start_workers(Monitor, NWorkers, WorkFlow, NextPRef, WorkerPRefs) ->
+    NewWorker = start_worker(Monitor, WorkFlow, NextPRef),
+    start_workers(Monitor, NWorkers-1, WorkFlow, NextPRef, [NewWorker|WorkerPRefs]).
 
 start_workers_hyb(_Monitor, NCPUWorkers, NGPUWorkers, _WorkFlowCPU, _WorkFlowGPU, _NextPid, Acc)
   when (NCPUWorkers < 1) and (NGPUWorkers < 1) ->
@@ -50,12 +51,12 @@ start_workers_hyb(Monitor, NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU, N
     NewWorker = start_worker(Monitor, WorkFlowCPU, NextPid),
     start_workers_hyb(Monitor, NCPUWorkers-1, NGPUWorkers, WorkFlowCPU, WorkFlowGPU, NextPid, {[NewWorker|CPUWs],GPUWs}).
 
--spec start_worker(pid(), workflow(), pid()) -> pid().
+-spec start_worker(pid(), workflow(), pref()) -> pref().
 %% @doc Provides a worker with its tasks, the workflow <tt>WorkFlow</tt>.
 %% <tt>NextPid</tt> provides the output process to which the worker's results
 %% are sent.
-start_worker(Monitor, WorkFlow, NextPid) ->
-  sk_assembler:make(Monitor, WorkFlow, NextPid).
+start_worker(Monitor, WorkFlow, NextPRef) ->
+    sk_assembler:make(Monitor, WorkFlow, NextPRef).
 
 -spec start_worker_hyb(workflow(), pid(), pos_integer(), pos_integer()) -> pid().
 start_worker_hyb(WorkFlow, NextPid, NCPUWorkers, NGPUWorkers) ->

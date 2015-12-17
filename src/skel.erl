@@ -16,7 +16,8 @@
          farm/2,
          farm/3,
          pipe/1,
-         pipe/2
+         pipe/2,
+         map/2
         ]).
 
 -include("../include/skel.hrl").
@@ -91,3 +92,7 @@ pipe(WorkflowFuns, Input) ->
     skel:do(lists:map(fun(Fun) ->
                               {func, Fun}
                       end, WorkflowFuns), Input).
+
+-spec map(fun(), list()) -> list().
+map(Fun, Input) when is_function(Fun, 1) ->
+    skel:do({map, Fun}, Input).
