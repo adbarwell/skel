@@ -125,61 +125,61 @@ hyb_cluster_decomp_default(TimeRatio, StructSizeFun, MakeChunkFun, NCPUWorkers, 
     GPUChunkSizes = calculate_chunk_sizes(GPUItems, NGPUWorkers),
     [create_task_list(CPUChunkSizes, GPUChunkSizes, MakeChunkFun, Input)].
 
--spec make_hyb(pid(), workflow(), decomp_fun(), recomp_fun(), pos_integer(), pos_integer()) -> fun((pid()) -> pid()).
+-spec make_hyb(pid(), workflow(), decomp_fun(), recomp_fun(), pos_integer(), pos_integer()) -> fun((pref()) -> pref()).
 make_hyb(Monitor, Workflow, Decomp, Recomp, NCPUWorkers, NGPUWorkers) ->
-    fun(NextPid) ->
-	    RecompPid = sk_monitor:spawn(Monitor,
-                                   sk_cluster_recomp, start, [Recomp, NextPid]),
-	    WorkerPid = sk_utils:start_worker_hyb(Monitor,
-                                            Workflow,
-                                            RecompPid,
-                                            NCPUWorkers,
-                                            NGPUWorkers),
-	    sk_monitor:spawn(Monitor,
-                       sk_cluster_decomp, start,
-                       [fun(Input) ->
-                                hyb_cluster_decomp(Decomp,
+    fun(NextPRef) ->
+            RecompPRef = sk_monitor:spawn(Monitor,
+                                          sk_cluster_recomp, start, [Recomp, NextPRef]),
+            WorkerPRef = sk_utils:start_worker_hyb(Monitor,
+                                                   Workflow,
+                                                   RecompPRef,
                                                    NCPUWorkers,
-                                                   NGPUWorkers,
-                                                   Input)
-                        end,
-					    WorkerPid])
+                                                   NGPUWorkers),
+            sk_monitor:spawn(Monitor,
+                             sk_cluster_decomp, start,
+                             [fun(Input) ->
+                                      hyb_cluster_decomp(Decomp,
+                                                         NCPUWorkers,
+                                                         NGPUWorkers,
+                                                         Input)
+                              end,
+                              WorkerPRef])
     end.
 
 -spec make_hyb(pid(), workflow(), float(), fun((any()) -> pos_integer()), fun((any(),pos_integer()) -> pos_integer()),
 	       fun((any())->any()),
-	       pos_integer(), pos_integer()) -> fun((pid()) -> pid()).
+	       pos_integer(), pos_integer()) -> fun((pref()) -> pref()).
 make_hyb(Monitor, Workflow, TimeRatio, StructSizeFun, MakeChunkFun, RecompFun, NCPUWorkers, NGPUWorkers) ->
-    fun(NextPid) ->
-	    RecompPid = sk_monitor:spawn(Monitor,
-                                   sk_cluster_recomp, start,
-                                   [RecompFun, NextPid]),
-	    WorkerPid = sk_utils:start_worker_hyb(Monitor,
-                                            Workflow,
-                                            RecompPid,
-                                            NCPUWorkers,
-                                            NGPUWorkers),
-	    sk_monitor:spawn(Monitor,
-                       sk_cluster_decomp, start,
-                       [fun(Input) ->
-                                hyb_cluster_decomp_default(TimeRatio,
-                                                           StructSizeFun,
-                                                           MakeChunkFun,
-                                                           NCPUWorkers,
-                                                           NGPUWorkers,
-                                                           Input)
-                        end, WorkerPid])
+    fun(NextPRef) ->
+            RecompPRef = sk_monitor:spawn(Monitor,
+                                          sk_cluster_recomp, start,
+                                          [RecompFun, NextPRef]),
+            WorkerPRef = sk_utils:start_worker_hyb(Monitor,
+                                                   Workflow,
+                                                   RecompPRef,
+                                                   NCPUWorkers,
+                                                   NGPUWorkers),
+            sk_monitor:spawn(Monitor,
+                             sk_cluster_decomp, start,
+                             [fun(Input) ->
+                                      hyb_cluster_decomp_default(TimeRatio,
+                                                                 StructSizeFun,
+                                                                 MakeChunkFun,
+                                                                 NCPUWorkers,
+                                                                 NGPUWorkers,
+                                                                 Input)
+                              end, WorkerPRef])
     end.
 
 -spec make_hyb(pid(), workflow(), float(), pos_integer(), pos_integer()) -> fun((pid())->pid()).
 make_hyb(Monitor, Workflow, TimeRatio, NCPUWorkers, NGPUWorkers) ->
-    fun(NextPid) ->
-            RecompPid = sk_monitor:spawn(Monitor,
-                                         sk_cluster_recomp, start,
-                                         [fun lists:flatten/1, NextPid]),
-            WorkerPid = sk_utils:start_worker_hyb(Monitor,
+    fun(NextPRef) ->
+            RecompPRef = sk_monitor:spawn(Monitor,
+                                          sk_cluster_recomp, start,
+                                          [fun lists:flatten/1, NextPRef]),
+            WorkerPRef = sk_utils:start_worker_hyb(Monitor,
                                                   Workflow,
-                                                  RecompPid,
+                                                  RecompPRef,
                                                   NCPUWorkers,
                                                   NGPUWorkers),
             sk_monitor:spawn(
@@ -194,5 +194,5 @@ make_hyb(Monitor, Workflow, TimeRatio, NCPUWorkers, NGPUWorkers) ->
                                                   NCPUWorkers,
                                                   NGPUWorkers,
                                                   Input)
-               end, WorkerPid])
+               end, WorkerPRef])
     end.

@@ -58,9 +58,9 @@ start_workers_hyb(Monitor, NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU, N
 start_worker(Monitor, WorkFlow, NextPRef) ->
     sk_assembler:make(Monitor, WorkFlow, NextPRef).
 
--spec start_worker_hyb(workflow(), pid(), pos_integer(), pos_integer()) -> pid().
-start_worker_hyb(WorkFlow, NextPid, NCPUWorkers, NGPUWorkers) ->
-    sk_assembler:make_hyb(WorkFlow, NextPid, NCPUWorkers, NGPUWorkers).
+-spec start_worker_hyb(workflow(), pref(), pos_integer(), pos_integer()) -> pref().
+start_worker_hyb(WorkFlow, NextPRef, NCPUWorkers, NGPUWorkers) ->
+    sk_assembler:make_hyb(WorkFlow, NextPRef, NCPUWorkers, NGPUWorkers).
 
 -spec stop_workers(module(), [pid()]) -> 'eos'.
 %% @doc Sends the halt command to each worker in the given list of worker
