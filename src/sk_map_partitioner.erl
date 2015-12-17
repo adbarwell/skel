@@ -54,10 +54,10 @@ start(_Monitor, man, WorkerPRefs, CombinerPRef) when
   sk_tracer:t(75, self(), {?MODULE, start}, [{combiner, CombinerPRef}]),
   loop(decomp_by(), CombinerPRef, WorkerPRefs).
 
--spec start_hyb(atom(), [pid()], [pid()], pid()) -> 'eos'.
-start_hyb(man, CPUWorkerPids, GPUWorkerPids, CombinerPid) ->
-  sk_tracer:t(75, self(), {?MODULE, start}, [{combiner, CombinerPid}]),
-  loop_hyb(decomp_by(), CombinerPid, CPUWorkerPids, GPUWorkerPids).
+-spec start_hyb(man, [pref()], [pref()], pref()) -> 'eos'.
+start_hyb(man, CPUWorkerPRefs, GPUWorkerPRefs, CombinerPRef) ->
+  sk_tracer:t(75, self(), {?MODULE, start}, [{combiner, CombinerPRef}]),
+  loop_hyb(decomp_by(), CombinerPRef, CPUWorkerPRefs, GPUWorkerPRefs).
 
 
 -spec loop(pid(), data_decomp_fun(), workflow(), pref(), [pref()]) -> 'eos'.
@@ -104,13 +104,13 @@ loop(DataPartitionerFun, CombinerPref, WorkerPrefs) ->
       eos
     end.
 
-loop_hyb(DataPartitionerFun, CombinerPid, CPUWorkerPids, GPUWorkerPids) ->
+loop_hyb(DataPartitionerFun, CombinerPRef, CPUWorkerPRefs, GPUWorkerPRefs) ->
   receive
     {data, _, _} = DataMessage ->
       PartitionMessages = DataPartitionerFun(DataMessage),
       Ref = make_ref(),
       sk_tracer:t(60, self(), {?MODULE, data}, [{ref, Ref}, {input, DataMessage}, {partitions, PartitionMessages}]),
-      hyb_dispatch(Ref, length(PartitionMessages), PartitionMessages, CPUWorkerPids, GPUWorkerPids),
+      hyb_dispatch(Ref, length(PartitionMessages), PartitionMessages, CPUWorkerPRefs, GPUWorkerPRefs),
       loop_hyb(DataPartitionerFun, CombinerPid, CPUWorkerPids, GPUWorkerPids);
     {system, eos} ->
       sk_utils:stop_workers(?MODULE, CPUWorkerPids),
@@ -175,15 +175,15 @@ dispatch(Ref, NPartitions, Idx,
 
 hyb_dispatch(_Ref,_NPartitions, _Idx, [], _, _) ->
   ok;
-hyb_dispatch(Ref, NPartitions, Idx, [{DataTag,{cpu,Msg},Rest}|PartitionMessages], [CPUWorkerPid|CPUWorkerPids], GPUWorkerPids) ->
+hyb_dispatch(Ref, NPartitions, Idx, [{DataTag,{cpu,Msg},Rest}|PartitionMessages], [{CPUWPid, _} = CPUWorkerPRef|CPUWorkerPRefs], GPUWorkerPRefs) ->
   PartitionMessageWithoutTag = {DataTag, Msg, Rest},
   PartitionMessage1 = sk_data:push({decomp, Ref, Idx, NPartitions}, PartitionMessageWithoutTag),
-  sk_tracer:t(50, self(), CPUWorkerPid, {?MODULE, data}, [{partition, PartitionMessage1}]),
-  CPUWorkerPid ! PartitionMessage1,
-  hyb_dispatch(Ref, NPartitions, Idx+1, PartitionMessages, CPUWorkerPids ++ [CPUWorkerPid], GPUWorkerPids);
-hyb_dispatch(Ref, NPartitions, Idx, [{DataTag,{gpu,Msg},Rest}|PartitionMessages], CPUWorkerPids, [GPUWorkerPid|GPUWorkerPids]) ->
+  sk_tracer:t(50, self(), CPUWorkerPRef, {?MODULE, data}, [{partition, PartitionMessage1}]),
+  CPUWPid ! PartitionMessage1,
+  hyb_dispatch(Ref, NPartitions, Idx+1, PartitionMessages, CPUWorkerPRefs ++ [CPUWorkerPRef], GPUWorkerPRefs);
+hyb_dispatch(Ref, NPartitions, Idx, [{DataTag,{gpu,Msg},Rest}|PartitionMessages], CPUWorkerPRefs, [{GPUWorkerPid, _} = GPUWorkerPRef|GPUWorkerPRefs]) ->
   PartitionMessageWithoutTag = {DataTag, Msg, Rest},
   PartitionMessage1 = sk_data:push({decomp, Ref, Idx, NPartitions}, PartitionMessageWithoutTag),
   sk_tracer:t(50, self(), GPUWorkerPid, {?MODULE, data}, [{partition, PartitionMessage1}]),
   GPUWorkerPid ! PartitionMessage1,
-  hyb_dispatch(Ref, NPartitions, Idx+1, PartitionMessages, CPUWorkerPids, GPUWorkerPids ++ [GPUWorkerPid]).
+  hyb_dispatch(Ref, NPartitions, Idx+1, PartitionMessages, CPUWorkerPRefs, GPUWorkerPRefs ++ [GPUWorkerPRef]).

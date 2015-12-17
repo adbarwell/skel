@@ -91,19 +91,19 @@ make(Monitor, WorkFlow, NWorkers) ->
 %% the workers. These workers are initialised with the specified workflow, and
 %% their Pids passed to a {@link sk_map_partitioner} process.
 make_hyb(Monitor, WorkFlowCPU, WorkFlowGPU, NCPUWorkers, NGPUWorkers) ->
-  fun(NextPid) ->
-    CombinerPid = sk_monitor:spawn(Monitor,
-                                   sk_map_combiner,
-                                   start, [NextPid, NCPUWorkers+NGPUWorkers]),
-    {CPUWorkerPids, GPUWorkerPids} =
-              sk_utils:start_workers_hyb(Monitor,
-                                         NCPUWorkers,
-                                         NGPUWorkers,
-                                         WorkFlowCPU,
-                                         WorkFlowGPU,
-                                         CombinerPid),
-    sk_monitor:spawn(Monitor,
-                     sk_map_partitioner,
-                     start_hyb,
-                     [Monitor, man, CPUWorkerPids, GPUWorkerPids, CombinerPid])
-  end.
+    fun(NextPRef) ->
+            CombinerPRef = sk_monitor:spawn(Monitor,
+                                            sk_map_combiner,
+                                            start, [NextPRef, NCPUWorkers+NGPUWorkers]),
+            {CPUWorkerPids, GPUWorkerPids} =
+                sk_utils:start_workers_hyb(Monitor,
+                                           NCPUWorkers,
+                                           NGPUWorkers,
+                                           WorkFlowCPU,
+                                           WorkFlowGPU,
+                                           CombinerPRef),
+            sk_monitor:spawn(Monitor,
+                             sk_map_partitioner,
+                             start_hyb,
+                             [Monitor, man, CPUWorkerPids, GPUWorkerPids, CombinerPRef])
+    end.

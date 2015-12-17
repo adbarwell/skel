@@ -25,9 +25,9 @@
 start_workers(Monitor, NWorkers, WorkFlow, NextPid) ->
   start_workers(Monitor, NWorkers, WorkFlow, NextPid, []).
 
--spec start_workers_hyb(pid(), pos_integer(), pos_integer(), workflow(), workflow(), pid()) -> {[pid()],[pid()]}.
-start_workers_hyb(Monitor, NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU, NextPid) ->
-  start_workers_hyb(Monitor, NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU, NextPid, {[],[]}).
+-spec start_workers_hyb(pid(), pos_integer(), pos_integer(), workflow(), workflow(), pref()) -> {[pref()],[pref()]}.
+start_workers_hyb(Monitor, NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU, NextPRef) ->
+  start_workers_hyb(Monitor, NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU, NextPRef, {[],[]}).
 
 -spec start_workers(pid(), pos_integer(), workflow(), pref(), [pref()]) -> [pref()].
 %% @doc Starts a given number <tt>NWorkers</tt> of workers as children to the
@@ -40,16 +40,16 @@ start_workers(Monitor, NWorkers, WorkFlow, NextPRef, WorkerPRefs) ->
     NewWorker = start_worker(Monitor, WorkFlow, NextPRef),
     start_workers(Monitor, NWorkers-1, WorkFlow, NextPRef, [NewWorker|WorkerPRefs]).
 
-start_workers_hyb(_Monitor, NCPUWorkers, NGPUWorkers, _WorkFlowCPU, _WorkFlowGPU, _NextPid, Acc)
+start_workers_hyb(_Monitor, NCPUWorkers, NGPUWorkers, _WorkFlowCPU, _WorkFlowGPU, _NextPRef, Acc)
   when (NCPUWorkers < 1) and (NGPUWorkers < 1) ->
     Acc;
-start_workers_hyb(Monitor, NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU, NextPid, {CPUWs,GPUWs})
+start_workers_hyb(Monitor, NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU, NextPRef, {CPUWs,GPUWs})
   when NCPUWorkers < 1 ->
-    NewWorker = start_worker(Monitor, WorkFlowGPU, NextPid),
-    start_workers_hyb(Monitor, NCPUWorkers, NGPUWorkers-1, WorkFlowCPU, WorkFlowGPU, NextPid, {CPUWs, [NewWorker|GPUWs]});
-start_workers_hyb(Monitor, NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU, NextPid, {CPUWs, GPUWs}) ->
-    NewWorker = start_worker(Monitor, WorkFlowCPU, NextPid),
-    start_workers_hyb(Monitor, NCPUWorkers-1, NGPUWorkers, WorkFlowCPU, WorkFlowGPU, NextPid, {[NewWorker|CPUWs],GPUWs}).
+    NewWorker = start_worker(Monitor, WorkFlowGPU, NextPRef),
+    start_workers_hyb(Monitor, NCPUWorkers, NGPUWorkers-1, WorkFlowCPU, WorkFlowGPU, NextPRef, {CPUWs, [NewWorker|GPUWs]});
+start_workers_hyb(Monitor, NCPUWorkers, NGPUWorkers, WorkFlowCPU, WorkFlowGPU, NextPRef, {CPUWs, GPUWs}) ->
+    NewWorker = start_worker(Monitor, WorkFlowCPU, NextPRef),
+    start_workers_hyb(Monitor, NCPUWorkers-1, NGPUWorkers, WorkFlowCPU, WorkFlowGPU, NextPRef, {[NewWorker|CPUWs],GPUWs}).
 
 -spec start_worker(pid(), workflow(), pref()) -> pref().
 %% @doc Provides a worker with its tasks, the workflow <tt>WorkFlow</tt>.
