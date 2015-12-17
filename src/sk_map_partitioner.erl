@@ -111,10 +111,10 @@ loop_hyb(DataPartitionerFun, CombinerPRef, CPUWorkerPRefs, GPUWorkerPRefs) ->
       Ref = make_ref(),
       sk_tracer:t(60, self(), {?MODULE, data}, [{ref, Ref}, {input, DataMessage}, {partitions, PartitionMessages}]),
       hyb_dispatch(Ref, length(PartitionMessages), PartitionMessages, CPUWorkerPRefs, GPUWorkerPRefs),
-      loop_hyb(DataPartitionerFun, CombinerPid, CPUWorkerPids, GPUWorkerPids);
+      loop_hyb(DataPartitionerFun, CombinerPRef, CPUWorkerPRefs, GPUWorkerPRefs);
     {system, eos} ->
-      sk_utils:stop_workers(?MODULE, CPUWorkerPids),
-      sk_utils:stop_workers(?MODULE, GPUWorkerPids),
+      sk_utils:stop_workers(?MODULE, CPUWorkerPRefs),
+      sk_utils:stop_workers(?MODULE, GPUWorkerPRefs),
       eos
     end.
 

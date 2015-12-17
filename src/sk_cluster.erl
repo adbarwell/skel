@@ -45,7 +45,7 @@
 -compile(export_all).
 -endif.
 
--spec make(pid(), workflow(), decomp_fun(), recomp_fun()) -> fun((pid()) -> pid()).
+-spec make(pid(), workflow(), decomp_fun(), recomp_fun()) -> fun((pref()) -> pref()).
 %% @doc Initialises the Cluster wrapper using both the developer-defined
 %% functions under `Decomp' and `Recomp' as decomposition and recomposition
 %% functions respectively.
@@ -53,13 +53,13 @@
 %% Inputs are decomposed, sent through the specified (inner) workflow, and
 %% then recomposed to be delivered as output.
 make(Monitor, WorkFlow, Decomp, Recomp) ->
-  fun(NextPid) ->
-    RecompPid = sk_monitor:spawn(Monitor,
-                                 sk_cluster_recomp, start, [Recomp, NextPid]),
-    WorkerPid = sk_utils:start_worker(Monitor, WorkFlow, RecompPid),
-    sk_monitor:spawn(Monitor,
-                     sk_cluster_decomp, start, [Decomp, WorkerPid])
-  end.
+    fun(NextPRef) ->
+            RecompPRef = sk_monitor:spawn(Monitor,
+                                          sk_cluster_recomp, start, [Recomp, NextPRef]),
+            WorkerPRef = sk_utils:start_worker(Monitor, WorkFlow, RecompPRef),
+            sk_monitor:spawn(Monitor,
+                             sk_cluster_decomp, start, [Decomp, WorkerPRef])
+    end.
 
 ceiling(X) ->
     T = erlang:trunc(X),

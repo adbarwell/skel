@@ -17,7 +17,8 @@
          farm/3,
          pipe/1,
          pipe/2,
-         map/2
+         map/2,
+         cluster/4
         ]).
 
 -include("../include/skel.hrl").
@@ -96,3 +97,6 @@ pipe(WorkflowFuns, Input) ->
 -spec map(fun(), list()) -> list().
 map(Fun, Input) when is_function(Fun, 1) ->
     skel:do({map, Fun}, Input).
+
+cluster(Fun, Decomp, Recomp, Input) when is_function(Fun, 1) ->
+    skel:do({cluster, Fun, Decomp, Recomp}, Input).

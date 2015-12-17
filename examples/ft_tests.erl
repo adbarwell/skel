@@ -19,3 +19,9 @@ farm() ->
 
 map() ->
     skel:map(fun(X) -> X end, minput()).
+
+id(X) ->
+    X.
+
+cluster() ->
+    skel:cluster(fun(X) -> X end, fun(X) -> X end, fun(X) -> X end, minput()).
