@@ -80,3 +80,5 @@
 -type data_filter_fun() :: fun((data_message())       -> boolean()).
 %% Any function that determines whether a data message satisfies some given
 %% constraint.
+
+-type pref() :: {pid(), reference()}.

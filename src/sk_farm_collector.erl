@@ -9,7 +9,7 @@
 %%% sent to one of `n' replicas of the inner skeleton for processing.
 %%%
 %%% The collector takes inputs off the inner-skeletons' output streams, sending
-%%% them out on the farm skeleton's output stream. It does not preserve 
+%%% them out on the farm skeleton's output stream. It does not preserve
 %%% ordering.
 %%%
 %%% @end
@@ -22,29 +22,28 @@
 
 -include("skel.hrl").
 
--spec start(pos_integer(), pid()) -> 'eos'.
+-spec start(pos_integer(), {pid(), reference()}) -> 'eos'.
 %% @doc Initialises the collector; forwards any and all output from the inner-
 %% workflow to the sink process at `NextPid'.
-start(NWorkers, NextPid) ->
-  sk_tracer:t(75, self(), {?MODULE, start}, [{num_workers, NWorkers}, {next_pid, NextPid}]),
-  loop(NWorkers, NextPid).
+start(NWorkers, NextPRef) ->
+  sk_tracer:t(75, self(), {?MODULE, start}, [{num_workers, NWorkers}, {next_pid, NextPRef}]),
+  loop(NWorkers, NextPRef).
 
--spec loop(pos_integer(), pid()) -> 'eos'.
-%% @doc Worker-function for {@link start/2}. Recursively receives, and 
-%% forwards, any output messages from the inner-workflow. Halts when the `eos' 
+-spec loop(pos_integer(), {pid(), reference()}) -> 'eos'.
+%% @doc Worker-function for {@link start/2}. Recursively receives, and
+%% forwards, any output messages from the inner-workflow. Halts when the `eos'
 %% system message is received, and only one active worker process remains.
-loop(NWorkers, NextPid) ->
+loop(NWorkers, {NextPid, _} = NextPRef) ->
   receive
     {data, _, _} = DataMessage ->
       sk_tracer:t(50, self(), NextPid, {?MODULE, data}, [{input, DataMessage}]),
       NextPid ! DataMessage,
-      loop(NWorkers, NextPid);
+      loop(NWorkers, NextPRef);
     {system, eos} when NWorkers =< 1 ->
       sk_tracer:t(75, self(), NextPid, {?MODULE, system}, [{msg, eos}, {remaining, 0}]),
       NextPid ! {system, eos},
       eos;
     {system, eos} ->
       sk_tracer:t(85, self(), {?MODULE, system}, [{msg, eos}, {remaining, NWorkers-1}]),
-      loop(NWorkers-1, NextPid)
+      loop(NWorkers-1, NextPRef)
   end.
-

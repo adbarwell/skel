@@ -12,4 +12,4 @@ ord() ->
     skel:do({ord, fun(X) -> X end}, input()).
 
 farm() ->
-    skel:farm(fun(X) -> error(boo), X end, input()).
+    skel:farm(fun(X) -> X end, input()).

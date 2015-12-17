@@ -66,9 +66,9 @@ start_worker_hyb(WorkFlow, NextPid, NCPUWorkers, NGPUWorkers) ->
 %% processes.
 stop_workers(_Mod, []) ->
   eos;
-stop_workers(Mod, [Worker|Rest]) ->
-  sk_tracer:t(85, self(), Worker, {Mod, system}, [{msg, eos}]),
-  Worker ! {system, eos},
+stop_workers(Mod, [{WorkerP, _} | Rest]) ->
+  sk_tracer:t(85, self(), WorkerP, {Mod, system}, [{msg, eos}]),
+  WorkerP ! {system, eos},
   stop_workers(Mod, Rest).
 
 -spec cores_available() -> non_neg_integer().

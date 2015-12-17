@@ -31,13 +31,13 @@
 %% @doc Initialises a Farm skeleton given the number of workers and their
 %% inner-workflows, respectively.
 make(Monitor, NWorkers, WorkFlow) ->
-  fun(NextPid) ->
-    CollectorPid =
-              sk_monitor:spawn(Monitor,
-                               sk_farm_collector, start, [NWorkers, NextPid]),
-    WorkerPids =
-              sk_utils:start_workers(Monitor, NWorkers, WorkFlow, CollectorPid),
-    sk_monitor:spawn(Monitor, sk_farm_emitter, start, [WorkerPids])
+    fun(NextPRef) ->
+            CollectorPRef =
+                sk_monitor:spawn(Monitor,
+                                 sk_farm_collector,
+                                 start, [NWorkers, NextPRef]),
+            WorkerPRefs = sk_utils:start_workers(Monitor, NWorkers, WorkFlow, CollectorPRef),
+    sk_monitor:spawn(Monitor, sk_farm_emitter, start, [WorkerPRefs])
   end.
 
 -spec make_hyb(pid(), pos_integer(), pos_integer(), workflow(), workflow()) -> maker_fun().
