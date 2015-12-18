@@ -19,7 +19,8 @@
          pipe/2,
          map/2,
          cluster/4,
-         reduce/3
+         reduce/3,
+         feedback/3
         ]).
 
 -include("../include/skel.hrl").
@@ -104,3 +105,6 @@ cluster(Fun, Decomp, Recomp, Input) when is_function(Fun, 1) ->
 
 reduce(RFun, DFun, Input) when is_function(RFun, 2), is_function(DFun, 1) ->
     skel:do({reduce, RFun, DFun}, Input).
+
+feedback(Fun, CFun, Input) when is_function(Fun, 1), is_function(CFun, 1) ->
+    skel:do({feedback, Fun, CFun}, Input).

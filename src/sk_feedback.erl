@@ -35,15 +35,15 @@
 %% defined function `FilterFun', and are used to check inputs according to
 %% said function.
 make(Monitor, WorkFlow, FilterFun) ->
-  fun(NextPid) ->
-    Ref = make_ref(),
-    CounterPid = sk_monitor:spawn(Monitor,
-                                  sk_feedback_bicounter, start, []),
-    FilterPid = sk_monitor:spawn(Monitor,
-                                 sk_feedback_filter, start,
-                                 [FilterFun, Ref, CounterPid, NextPid]),
-    WorkerPid = sk_utils:start_worker(Monitor, WorkFlow, FilterPid),
-    sk_monitor:spawn(Monitor,
-                     sk_feedback_receiver, start,
-                     [Ref, CounterPid, FilterPid, WorkerPid])
-  end.
+    fun(NextPRef) ->
+            Ref = make_ref(),
+            CounterPRef = sk_monitor:spawn(Monitor,
+                                           sk_feedback_bicounter, start, []),
+            FilterPRef = sk_monitor:spawn(Monitor,
+                                          sk_feedback_filter, start,
+                                          [Monitor, FilterFun, Ref, CounterPRef, NextPRef]),
+            WorkerPRef = sk_utils:start_worker(Monitor, WorkFlow, FilterPRef),
+            sk_monitor:spawn(Monitor,
+                             sk_feedback_receiver, start,
+                             [Monitor, Ref, CounterPRef, FilterPRef, WorkerPRef])
+    end.

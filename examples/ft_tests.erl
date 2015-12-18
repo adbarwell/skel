@@ -28,3 +28,6 @@ cluster() ->
 
 reduce() ->
     skel:reduce(fun(X, Y) -> X + Y end, fun(X) -> X end, minput()).
+
+feedback() ->
+    skel:feedback(fun(X) -> X end, fun(_) -> false end, input()).

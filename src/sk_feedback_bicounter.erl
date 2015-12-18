@@ -2,10 +2,10 @@
 %%% @author Sam Elliott <ashe@st-andrews.ac.uk>
 %%% @copyright 2012 University of St Andrews (See LICENCE)
 %%% @headerfile "skel.hrl"
-%%% 
+%%%
 %%% @doc This module contains 'feedback' skeleton counter logic.
 %%%
-%%% The Feedback skeleton repeatedly passes output from its inner-workflow 
+%%% The Feedback skeleton repeatedly passes output from its inner-workflow
 %%% back into said workflow until a given constraint-checking function fails.
 %%%
 %%% It turns out in the feedback skeleton we have to maintain counts of numbers
@@ -20,8 +20,8 @@
 
 -export([
          start/0
-        ,subscribe/1
-        ,cast/2
+        ,subscribe/2
+        ,cast/3
         ]).
 
 -export_type([
@@ -45,28 +45,28 @@ start() ->
   sk_tracer:t(90, self(), {?MODULE, start}, [{a, 0}, {b, 0}, {subscribers, []}]),
   loop({0, 0}, []).
 
--spec subscribe(pid()) -> ok.
-%% @doc Subscribes the calling process to the counter at `CounterPid'. 
+-spec subscribe(pid(), pref()) -> ok.
+%% @doc Subscribes the calling process to the counter at `CounterPid'.
 %% Subscribed processes will receive messages from the counter when it updates.
-subscribe(CounterPid) ->
-  sk_tracer:t(85, self(), CounterPid, {?MODULE, system}, [{msg, counter}, {command, subscribe}]),
-  CounterPid ! {system, {counter, subscribe, self()}},
+subscribe(Monitor, {CounterPid, _} = CounterPRef) ->
+  sk_tracer:t(85, self(), CounterPRef, {?MODULE, system}, [{msg, counter}, {command, subscribe}]),
+  CounterPid ! {system, {counter, subscribe, sk_monitor:self(Monitor)}},
   ok.
 
--spec cast(pid(), {bi_command(), bi_command()}) -> ok.
-%% @doc The commands given by a process under `Commands' are sent to be 
+-spec cast(pid(), pref(), {bi_command(), bi_command()}) -> ok.
+%% @doc The commands given by a process under `Commands' are sent to be
 %% executed by the counter at `CounterPid'.
-cast(CounterPid, Commands) ->
-  sk_tracer:t(85, self(), CounterPid, {?MODULE, system}, [{msg, counter}, {command, Commands}]),
-  CounterPid ! {system, {counter, Commands, self()}},
+cast(Monitor, {CounterPid, _} = CounterPRef, Commands) ->
+  sk_tracer:t(85, self(), CounterPRef, {?MODULE, system}, [{msg, counter}, {command, Commands}]),
+  CounterPid ! {system, {counter, Commands, sk_monitor:self(Monitor)}},
   ok.
 
 -spec loop(counters(), [pid()]) -> ok.
-%% @doc Recursively receives commands to update the counter tuple under 
+%% @doc Recursively receives commands to update the counter tuple under
 %% `Counters'.
-%% 
-%% Adds a subsriber to the list under `Subscribers', executes a given command, 
-%% and halts the counter when both the `eos' system message is received and 
+%%
+%% Adds a subsriber to the list under `Subscribers', executes a given command,
+%% and halts the counter when both the `eos' system message is received and
 %% the counters are both zero.
 loop(Counters, Subscribers) ->
   receive
@@ -82,7 +82,7 @@ loop(Counters, Subscribers) ->
   end.
 
 -spec command(counters(), {bi_command(), bi_command()}, [pid()]) -> counters().
-%% @doc Executes a given command for the specified counters, notifying 
+%% @doc Executes a given command for the specified counters, notifying
 %% subscribers of the change.
 command({CA,CB}, {CommandA, CommandB}, Subscribers) ->
   Counters = {execute(CA, CommandA), execute(CB, CommandB)},
@@ -100,11 +100,11 @@ execute(C, decr) -> C-1;
 execute(C, _) -> C.
 
 -spec notify_subscribers(counters(), [pid()]) -> ok.
-%% @doc Recursively sends the updated counter under `Counters' to each 
+%% @doc Recursively sends the updated counter under `Counters' to each
 %% subscriber in the attached list of subscribers.
 notify_subscribers(_, []) ->
   ok;
-notify_subscribers(Counters, [Subscriber|Subscribers]) ->
+notify_subscribers(Counters, [{Subscriber, _} |Subscribers]) ->
   sk_tracer:t(90, self(), Subscriber, {?MODULE, system}, [{msg, counter}, {counters, Counters}]),
   Subscriber ! {system, {counter, Counters, self()}},
   notify_subscribers(Counters, Subscribers).

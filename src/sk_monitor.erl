@@ -3,7 +3,8 @@
 -export([
          loop/1,
          start/0,
-         spawn/4
+         spawn/4,
+         self/1
         ]).
 
 -include("../include/skel.hrl").
@@ -22,11 +23,17 @@ loop(Ps) ->
             {Pid, Ref} = PRef =  spawn_monitor(M, F, A),
             From ! PRef,
             loop(dict:append(Ref, Pid, Ps));
+        {self, From} ->
+            [{R, [P]}] = dict:to_list(dict:filter(fun(_, [V]) ->
+                                                          V =:= From
+                                                  end, Ps)),
+            From ! {self, {P, R}},
+            loop(Ps);
         {system, eos} ->
             sk_tracer:t(75, self(), {?MODULE, system}, [{msg, eos}]),
-            ok;
-        X ->
-            io:format("~n*** sk_monitor, unknown message - X: ~p~n~n", [X])
+            ok
+        %% X ->
+        %%     io:format("~n*** sk_monitor, unknown message - X: ~p~n~n", [X])
     end.
 
 -spec start() -> pid().
@@ -35,10 +42,18 @@ start() ->
 
 -spec spawn(pid(), module(), atom(), list()) -> {pid(), reference()}.
 spawn(Monitor, M, F, A) ->
-    Monitor ! {spawn, self(), M, F, A},
+    Monitor ! {spawn, erlang:self(), M, F, A},
     receive
         {P, R} = PRef when is_pid(P), is_reference(R) ->
-            PRef%;
+            PRef
         %% X ->
         %%     error({"Unexpected return value when spawning.", X})
+    end.
+
+-spec self(pid()) -> pref().
+self(Monitor) ->
+    Monitor ! {self, erlang:self()},
+    receive
+        {self, PRef} ->
+            PRef
     end.
