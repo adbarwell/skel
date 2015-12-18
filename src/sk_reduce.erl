@@ -29,15 +29,15 @@
 
 -include("../include/skel.hrl").
 
--spec make(pid(), decomp_fun(), reduce_fun()) -> fun((pid()) -> pid()).
+-spec make(pid(), decomp_fun(), reduce_fun()) -> fun((pref()) -> pref()).
 %% @doc Readies an instance of the Reduce skeleton. Uses the developer-defined
 %% decomposition and recomposition functions `Decomp' and `Reduce',
 %% respectively. Returns an anonymous function waiting for the sink process
 %% `NextPid'.
 make(Monitor, Decomp, Reduce) ->
-  fun(NextPid) ->
+  fun(NextPRef) ->
     sk_monitor:spawn(Monitor,
-                     sk_reduce_decomp, start, [Decomp, Reduce, NextPid])
+                     sk_reduce_decomp, start, [Monitor, Decomp, Reduce, NextPRef])
   end.
 
 % Implemented as a treefold underneath

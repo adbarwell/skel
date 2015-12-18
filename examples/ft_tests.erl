@@ -25,3 +25,6 @@ id(X) ->
 
 cluster() ->
     skel:cluster(fun(X) -> X end, fun(X) -> X end, fun(X) -> X end, minput()).
+
+reduce() ->
+    skel:reduce(fun(X, Y) -> X + Y end, fun(X) -> X end, minput()).
