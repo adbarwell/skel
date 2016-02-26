@@ -51,7 +51,7 @@ run(Monitor, WorkFlow, Input) when is_pid(element(1, WorkFlow)) ->
     Feeder = sk_source:make(Monitor, Input),
     Feeder(WorkFlow);
 run(Monitor, WorkFlow, Input) when is_list(WorkFlow) ->
-    DrainPRef = (sk_sink:make())(self()),
+    DrainPRef = (sk_sink:make(Monitor))(self()),
     AssembledWF = make(Monitor, WorkFlow, DrainPRef),
     run(Monitor, AssembledWF, Input);
 run(Monitor, WorkFlow, Input) when is_tuple(WorkFlow) ->
